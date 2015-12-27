@@ -14,6 +14,8 @@ import multiprocessing as mp
 from multiprocessing.pool import ThreadPool
 from mpl_toolkits.mplot3d import proj3d
 import datetime
+import matplotlib as mpl
+import matplotlib.cm as cm
 
 home_folder     = '/data1/Daniele/B2217+47'
 ephemeris_name  = '20111114_JB'
@@ -23,7 +25,7 @@ ephemeris_file  = ephemeris_folder + '/' + ephemeris_name + '.par'
 fits_folder     = home_folder + '/raw'
 product_folder  = home_folder + '/Products'
 plot_folder     = home_folder + '/Plots'
-profile_template = home_folder + '/ephemeris/151109_profile_template.std'
+profile_template= home_folder + '/ephemeris/20151208_template_L32532.npy'
 
 def create_profile(args,verbose,overwrite,loud,parallel,exclude=False):
   """
@@ -75,7 +77,7 @@ def execute_process(obs_list,cmd_out,overwrite,loud):
   for obs in obs_list:
     try:
       filename, file_ext = os.path.splitext(obs)
-      if (file_ext == '.fits'): store_type = 'fits'
+      if ((file_ext == '.fits') or (file_ext == '.fil')): store_type = 'fits'
       else: store_type = 'ar'
       if os.path.isfile('{}/{}'.format(fits_folder,obs)):
         if loud: print "  Observation {} is being processed".format(obs)
@@ -139,6 +141,7 @@ def obs_process(fits,cmd_out,overwrite,loud,store_type):
 
   elif store_type == 'ar':
     #ephemeris = 'LOFAR_ephemeris'
+    subprocess.call(['psredit','-c','site=LOFAR','-m','{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
     subprocess.call(['pam','-E',ephemeris_file,'-u',output_dir,'{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
     os.rename('{}/{}'.format(output_dir,fits),'{}/{}_{}.ar'.format(output_dir,obs,ephemeris))    
     #shutil.copyfile('{}/{}'.format(fits_folder,fits),'{}/{}_{}'.format(output_dir,obs,ephemeris))
@@ -219,14 +222,17 @@ def obs_process(fits,cmd_out,overwrite,loud,store_type):
 
 
 def obs_from_fits(fits):
-    idx_start = fits.find('L')
-    while not fits[idx_start+1].isdigit():
-      idx_start = fits.find('L',idx_start+1)
-    idx_end = idx_start + 1
-    while fits[idx_end].isdigit():
-      idx_end += 1
-    return fits[idx_start:idx_end]
+  idx_start = fits.find('L')
+  if idx_start < 0: idx_start = fits.find('T')
+  if idx_start < 0: idx_start = fits.find('D')
 
+  #while not fits[idx_start+1].isdigit():
+  #  idx_start = fits.find('L',idx_start+1)
+  idx_end = idx_start + 1
+  while fits[idx_end].isdigit():
+    idx_end += 1
+  return fits[idx_start:idx_end]
+    
 
 def read_ephemeris(file):
   with open(file) as f:
@@ -239,11 +245,13 @@ def read_ephemeris(file):
   return dm, p
 
 
-def plot_profiles(archive):
-  def norm_shift(prof):
+def plot_profiles(archive,template):
+  def norm_shift(prof,template):
       prof = prof - np.min(prof)
       prof = prof / np.max(prof)
-      prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
+      shift = prof.size/2 - np.correlate(prof,template,mode='same').argmax()
+      prof = np.roll(prof,shift)
+      #prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
       return prof
 
   load_archive = psrchive.Archive_load(archive)
@@ -283,7 +291,7 @@ def zap_channels(file):
   return zap_channels#, obs_date
   
 
-def plot_lists(exclude=False,date_lim=False):
+def plot_lists(exclude=False,date_lim=False,template=False):
   date_list = []
   obs_list = []
   for obs in os.listdir(product_folder):
@@ -298,7 +306,12 @@ def plot_lists(exclude=False,date_lim=False):
         prof = load_archive.get_data().flatten()
         prof -= np.median(prof)
         prof /= np.max(prof)
-        prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
+        if isinstance(template,np.ndarray):
+          bins = prof.size
+          prof_ext = np.concatenate((prof[-bins/2:],prof,prof[bins/2:]))
+          shift = prof.size/2 - np.correlate(prof_ext,template,mode='valid').argmax()
+          prof = np.roll(prof,shift)
+        else: prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
         epoch = load_archive.get_Integration(0).get_epoch()
         date = datetime.date(int(epoch.datestr('%Y')), int(epoch.datestr('%m')), int(epoch.datestr('%d')))
         if date_lim:
@@ -316,13 +329,16 @@ def plot_lists(exclude=False,date_lim=False):
   return date_list,obs_list
 
 
-def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False):
-  date_list,obs_list = plot_lists(exclude,date_lim)
-  fig = plt.figure()
+def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,template=False):
+  date_list,obs_list = plot_lists(exclude,date_lim,template)
+  fig = plt.figure() #figsize=(5,10))
   ax = fig.add_subplot(111)
 
+  norm = mpl.colors.Normalize(vmin=min(date_list).toordinal(), vmax=max(date_list).toordinal())  
+  m = cm.ScalarMappable(norm=norm, cmap='copper_r')
+  
   base_y = np.min([date.toordinal() for date in date_list])
-  scale_y = 0.2 / np.min(np.diff(sorted(date_list))).days
+  scale_y = 0.001 / np.min(np.diff(sorted(date_list))).days
   obs_max = 0
   obs_min = 1
   for idx,obs in enumerate(obs_list):
@@ -332,16 +348,15 @@ def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False):
       x = x[zoom_idx]
       obs = obs[zoom_idx]
     if flux_lim: obs = np.clip(obs,flux_lim[0],flux_lim[1])
-    obs += scale_y * (float(date_list[idx].toordinal()) - base_y)
+    #obs += scale_y * (float(date_list[idx].toordinal()) - base_y)
     obs_max = max(obs_max, max(obs))
     obs_min = min(obs_min, min(obs))
-    ax.plot(x, obs, color='k')
+    ax.plot(x, obs, color=m.to_rgba(date_list[idx].toordinal())) #'k')
 
   if phase_lim: ax.set_xlim([phase_lim[0],phase_lim[1]])
   else: ax.set_xlim([0,1])
-  if flux_lim: ax.set_ylim([flux_lim[0],flux_lim[1]])
-  else: ax.set_ylim([0,1])
-
+  ax.set_ylim([obs_min,obs_max])
+  
   ax.set_xlabel('Phase')
   ax.set_ylabel('Date')
   glitch_epoch = datetime.date(2011, 10, 25).toordinal()
@@ -350,16 +365,16 @@ def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False):
 
   #Convert dates from ordinals
   fig.canvas.draw()
-  #ax.set_yticklabels([datetime.date.fromordinal(int((day+base_y)/scale_y)).strftime('%d-%m-%Y') for day in ax.get_yticks()])
+  ax.set_yticklabels([datetime.date.fromordinal(int((day/scale_y)+base_y)).strftime('%d-%m-%Y') for day in ax.get_yticks()])
   ax.tick_params(axis='y', labelsize=6)
-  #Save the plot
+  #Save the plot 
   plot_name = 'profiles'
   plt.savefig('{}/{}_{}.png'.format(plot_folder,time.strftime("%Y%m%d-%H%M%S"),plot_name),format='png',dpi=200)
 
 
 
-def plot3D(phase_lim=False,date_lim=False,flux_lim=False,exclude=False):
-  date_list,obs_list = plot_lists(exclude,date_lim)
+def plot3D(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,template=False):
+  date_list,obs_list = plot_lists(exclude,date_lim,template)
   fig = plt.figure()
   ax = fig.add_subplot(111, projection='3d')
 
@@ -421,8 +436,9 @@ if __name__ == '__main__':
 
   #Produce the cumulative plot and exit if the plot argument is given
   if args.p | args.p3d:
-    if args.p: cum_plot(exclude=args.e,phase_lim=args.phase_lim,date_lim=date_lim,flux_lim=args.flux_lim)
-    if args.p3d: plot3D(exclude=args.e,phase_lim=args.phase_lim,date_lim=date_lim,flux_lim=args.flux_lim)
+    template = np.load(profile_template)
+    if args.p: cum_plot(exclude=args.e,phase_lim=args.phase_lim,date_lim=date_lim,flux_lim=args.flux_lim,template=template)
+    if args.p3d: plot3D(exclude=args.e,phase_lim=args.phase_lim,date_lim=date_lim,flux_lim=args.flux_lim,template=template)
     exit()
     
   create_profile(args.f,args.v,args.ow,args.q,args.parallel,exclude=args.e)
