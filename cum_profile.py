@@ -225,6 +225,7 @@ def obs_from_fits(fits):
   idx_start = fits.find('L')
   if idx_start < 0: idx_start = fits.find('T')
   if idx_start < 0: idx_start = fits.find('D')
+  if idx_start < 0: idx_start = fits.find('_') + 1
 
   #while not fits[idx_start+1].isdigit():
   #  idx_start = fits.find('L',idx_start+1)
@@ -245,6 +246,7 @@ def read_ephemeris(file):
   return dm, p
 
 
+'''
 def plot_profiles(archive,template):
   def norm_shift(prof,template):
       prof = prof - np.min(prof)
@@ -259,6 +261,8 @@ def plot_profiles(archive,template):
   prof = norm_shift(prof)
   date = float(load_archive.get_ephemeris().get_value('MJD'))
   plt.plot(np.arange(0,1,1./len(prof)),prof,label=int(date))
+'''
+
 
 
 def write_ephemeris(ephemeris_file,DM,cwd,ephemeris_name):
@@ -318,6 +322,7 @@ def plot_lists(exclude=False,date_lim=False,template=False):
           if not date_lim[0] <= date <= date_lim[1]:
             continue
         if date in date_list:
+          print obs
           obs_list[date_list.index(date)] += prof
         else:
           date_list.append(date)
