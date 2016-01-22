@@ -4,36 +4,40 @@ import glob
 import os
 import matplotlib.pyplot as plt
 
-mjd_start = 40585-100
-mjd_end = 57385-100
-days = 200
+mjd_start = 40585
+mjd_end = 57585
+days = 250
 
-timing_dir = '/data1/Daniele/B2217+47/timing'
+timing_dir = '/data1/Daniele/B2217+47/timing_analysis/'
+par_file = 'posOK.par'
 
 #Write out the tim files
-tim = np.loadtxt('B2217_all_t2.tim',skiprows=1,usecols=(2,))
-file = open('B2217_all_t2.tim')
+tim = np.loadtxt(timing_dir+'B2217_all_t2.tim',skiprows=1,usecols=(2,))
 hist, bin_hedges = np.histogram(tim,bins=(mjd_end-mjd_start)/days,range=(mjd_start,mjd_end))
-for k,i in enumerate(hist):
-  line = []
-  for j in range(i):
-    line.append(file.readline())
-  if len(line) > 6:
-    f = open('tim' + str(k), 'w')
-    f.write('FORMAT 1\n')
-    for j in line:
-      f.write(j)
-    f.close()
-file.close()
 
+count = 0
+with open(timing_dir+'B2217_all_t2.tim') as file:
+  for k,i in enumerate(hist):
+    line = []
+    for j in range(i):
+      line.append(file.readline())
+    if len(line) > 7:
+      count += 1
+      with open('tim' + str(k), 'w') as f:
+        f.write('FORMAT 1\n')
+        for j in line:
+          f.write(j)
+  file.close()
+
+print "{} tim files created\n".format(count)
+#exit()
 
 #Calculate periods
 os.chdir(timing_dir)
 
-mjd = 46285.884251715530624
-f0 = 1.8571179660262512416
-f1 = -9.5374162027855618154e-15
-f2 = 2.1835949967530860308e-27
+mjd_i = 46285.884251715530624
+f0_i = 1.8571179660935379894 
+f1_i = -9.5370607327138547295e-15 
 
 x = []
 y = []
@@ -50,23 +54,21 @@ for i in file_list:
   num = int(i.split('tim')[-1])
   date = num * days + mjd_start + days / 2
 
-  f = open('test.par','r')
-  par = f.readlines()
-  f.close()
+  with open(timing_dir+par_file,'r') as f:
+    par = f.readlines()
 
   par[4] = 'PEPOCH         {}.0  \r\n'.format(date)
-  f1 = f1 + (date-mjd)*24*3600*f2
-  par[3] = 'F1             {} 1  3.9857359207474666112e-20\r\n'.format(f1)
-  f0 = f0 + (date-mjd)*24*3600*f1
+  #par[3] = 'F1             {} 1  3.9857359207474666112e-20\r\n'.format(f1)
+  f0 = f0_i + (date-mjd_i)*24*3600*f1_i
   par[2] = 'F0             {}     1  0.00000000000583536460   \r\n'.format(f0)
 
-  mjd = date
+  #mjd = date
 
-  with open('test.par','w') as f:
+  with open(timing_dir+par_file,'w') as f:
     for p in par:
       f.write(p)
   print i
-  output = subprocess.Popen(['tempo2','-output','general','-s','{F0_p} \n{F1_p} \n','-f','test.par',i],cwd=timing_dir,stdout=subprocess.PIPE)
+  output = subprocess.Popen(['tempo2','-output','general','-s','{F0_p} \n{F1_p} \n','-f',par_file,i],cwd=timing_dir,stdout=subprocess.PIPE)
   out, err = output.communicate()
   out = out.split('\n')
   f0_all = out[-5]

@@ -295,7 +295,7 @@ def zap_channels(file):
   return zap_channels#, obs_date
   
 
-def plot_lists(exclude=False,date_lim=False,template=False):
+def plot_lists(exclude=False,date_lim=False,template=False,bin_reduc=False):
   date_list = []
   obs_list = []
   for obs in os.listdir(product_folder):
@@ -308,9 +308,13 @@ def plot_lists(exclude=False,date_lim=False,template=False):
       if os.path.isfile(archive):
         load_archive = psrchive.Archive_load(archive)
         prof = load_archive.get_data().flatten()
+        if bin_reduc:
+          prof = prof.reshape(512,-1).mean(axis=1)
         prof -= np.median(prof)
         prof /= np.max(prof)
         if isinstance(template,np.ndarray):
+          if bin_reduc:
+            template = template.reshape(512,-1).mean(axis=1)
           bins = prof.size
           prof_ext = np.concatenate((prof[-bins/2:],prof,prof[bins/2:]))
           shift = prof.size/2 - np.correlate(prof_ext,template,mode='valid').argmax()
@@ -322,8 +326,11 @@ def plot_lists(exclude=False,date_lim=False,template=False):
           if not date_lim[0] <= date <= date_lim[1]:
             continue
         if date in date_list:
-          print obs
-          obs_list[date_list.index(date)] += prof
+          try: obs_list[date_list.index(date)] += prof
+          except ValueError:
+            print "Archive {} has a different number of bins!".format(obs)
+            date_list.append(date)
+            obs_list.append(prof)
         else:
           date_list.append(date)
           obs_list.append(prof)
@@ -334,9 +341,9 @@ def plot_lists(exclude=False,date_lim=False,template=False):
   return date_list,obs_list
 
 
-def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,template=False):
-  date_list,obs_list = plot_lists(exclude,date_lim,template)
-  fig = plt.figure() #figsize=(5,10))
+def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,template=False,bin_reduc=False):
+  date_list,obs_list = plot_lists(exclude,date_lim,template,bin_reduc)
+  fig = plt.figure(figsize=(5,10))
   ax = fig.add_subplot(111)
 
   norm = mpl.colors.Normalize(vmin=min(date_list).toordinal(), vmax=max(date_list).toordinal())  
@@ -353,10 +360,10 @@ def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,templat
       x = x[zoom_idx]
       obs = obs[zoom_idx]
     if flux_lim: obs = np.clip(obs,flux_lim[0],flux_lim[1])
-    #obs += scale_y * (float(date_list[idx].toordinal()) - base_y)
+    obs += scale_y * (float(date_list[idx].toordinal()) - base_y)
     obs_max = max(obs_max, max(obs))
     obs_min = min(obs_min, min(obs))
-    ax.plot(x, obs, color=m.to_rgba(date_list[idx].toordinal())) #'k')
+    ax.plot(x, obs, 'k') # color=m.to_rgba(date_list[idx].toordinal())
 
   if phase_lim: ax.set_xlim([phase_lim[0],phase_lim[1]])
   else: ax.set_xlim([0,1])
@@ -378,8 +385,8 @@ def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,templat
 
 
 
-def plot3D(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,template=False):
-  date_list,obs_list = plot_lists(exclude,date_lim,template)
+def plot3D(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,template=False,bin_reduc=False):
+  date_list,obs_list = plot_lists(exclude,date_lim,template,bin_reduc)
   fig = plt.figure()
   ax = fig.add_subplot(111, projection='3d')
 
@@ -430,6 +437,7 @@ if __name__ == '__main__':
   parser.add_argument('--phase_lim', nargs=2, type=float, help='Limits on the pulse phase')
   parser.add_argument('--date_lim', nargs=2, help='Limits on the date (DD-MM-YYYY)')
   parser.add_argument('--flux_lim', nargs=2, type=float, help='Limits on the flux (rel. units)')
+  parser.add_argument('--bin_reduc', action='store_true', help='Scrunch the profile size to 512 bins')
   parser.add_argument('-ow','-overwrite', action='store_true', help='Reprocess all the observations present. ATTENTION: the content will be overwritten!')  
   parser.add_argument('--parallel', action='store_true', help='Process the observations on multiple CPUs')
   parser.add_argument('-v','-verbose', action='store_true', help='Verbose output')
@@ -442,8 +450,8 @@ if __name__ == '__main__':
   #Produce the cumulative plot and exit if the plot argument is given
   if args.p | args.p3d:
     template = np.load(profile_template)
-    if args.p: cum_plot(exclude=args.e,phase_lim=args.phase_lim,date_lim=date_lim,flux_lim=args.flux_lim,template=template)
-    if args.p3d: plot3D(exclude=args.e,phase_lim=args.phase_lim,date_lim=date_lim,flux_lim=args.flux_lim,template=template)
+    if args.p: cum_plot(exclude=args.e,phase_lim=args.phase_lim,date_lim=date_lim,flux_lim=args.flux_lim,template=template,bin_reduc=args.bin_reduc)
+    if args.p3d: plot3D(exclude=args.e,phase_lim=args.phase_lim,date_lim=date_lim,flux_lim=args.flux_lim,template=template,bin_reduc=args.bin_reduc)
     exit()
     
   create_profile(args.f,args.v,args.ow,args.q,args.parallel,exclude=args.e)

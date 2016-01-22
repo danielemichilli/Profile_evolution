@@ -5,27 +5,41 @@ import sys
 
 archive = str(sys.argv[1])
 
-prof = psrchive.Archive_load(archive).get_data()
-times = np.sum(prof,axis=(1,2))
-times = (times-times.min(axis=0))/(times.max(axis=0)-times.min(axis=0))
+def timeseries(archive):
+  times = psrchive.Archive_load(archive).get_data()
+  times = np.sum(times,axis=(1,2))
 
-def pulses_plot(times):
-  for i in range(100):
+  med = np.median(times,axis=1)[:, np.newaxis]
+  times = times-med
+  times /= times.max()
+  return times
+
+
+def pulses_plot(times,start=0,end=100):
+  prof = times.sum(axis=0)
+  roll_idx = len(prof)-np.argmax(prof)+len(prof)/2
+  times = np.roll(times, roll_idx, axis=1)
+  for i in range(start,end):
     plt.plot(times[i]+i,'k')
-
   plt.xlim((0,1024))
   plt.show()
 
 
-
-def giant_pulses(times,rel_hight,left_lim,right_lim):
-  chunk = times[:,left_lim*1024:-right_lim*1024]
+def giant_pulses(times,rel_hight=0.06,left_lim=60,right_lim=980):
+  prof = times.sum(axis=0)
+  roll_idx = len(prof)-np.argmax(prof)
+  times = np.roll(times, roll_idx, axis=1)
+  chunk = times[:,left_lim:right_lim]
   print "{} bins above {} times the peak found".format(chunk[chunk>rel_hight].size,rel_hight)
-   
-  counts = np.bincount(chunk)
-  ind = np.argpartition(counts, -10)[-10:]
-  print "First ten profiles for number of single pulses above the limit: {}".format(ind)
    
   return
 
+if __name__ == "__main__":
+  rel_hight = 0.06
+  left_lim = 60
+  right_lim = 980
+  archive = str(sys.argv[1])
+  times = timeseries(archive)
+  giant_pulses(times,rel_hight,left_lim,right_lim)
+  pulses_plot(times)
 
