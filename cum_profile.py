@@ -25,7 +25,8 @@ ephemeris_file  = ephemeris_folder + '/' + ephemeris_name + '.par'
 fits_folder     = home_folder + '/raw'
 product_folder  = home_folder + '/Products'
 plot_folder     = home_folder + '/Plots'
-profile_template= home_folder + '/ephemeris/20151208_template_L32532.npy'
+profile_template= home_folder + '/ephemeris/151109_profile_template.std'
+
 
 def create_profile(args,verbose,overwrite,loud,parallel,exclude=False):
   """
@@ -91,11 +92,38 @@ def execute_process(obs_list,cmd_out,overwrite,loud):
 
 
 
+def process_fits(fits,obs,output_dir,cmd_out,loud):
+  #SCRUNCHED INITIAL ARCHIVE
+  zaps = zap_channels('{}/{}'.format(fits_folder,fits))
+  zaps = str(zaps)[1:-1].translate(None,',')
+
+  #Create the initial scrunched archive from the fits file
+  subprocess.call(['dspsr','-t','16','-E',ephemeris_file,'-j','zap chan',zaps,'-b','1024','-fft-bench',\
+                  '-O','{}_{}'.format(obs,ephemeris_name),'-K','-A','-s','-e','ar','{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
+  subprocess.call(['psredit','-c','rcvr:name=HBA','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
+  if loud: print "    Initial full-resolution archive created"
+
+
+
+def process_ar(fits,obs,output_dir,cmd_out,loud):
+  #SCRUNCHED INITIAL ARCHIVE
+  subprocess.call(['pam','-E',ephemeris_file,'-u',output_dir,'{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
+  #print 'pam','-E',ephemeris_file,'-u',output_dir,'{}/{}'.format(fits_folder,fits)
+  os.rename('{}/{}'.format(output_dir,fits),'{}/{}_{}.ar'.format(output_dir,obs,ephemeris_name))
+  subprocess.call(['psredit','-c','name=B2217+47','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
+  output = subprocess.Popen(['psredit','-c','site','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=subprocess.PIPE,stderr=cmd_out)  
+  out, err = output.communicate()  
+  idx = out.find('site=')
+  if out[idx+5] == 't':
+    subprocess.call(['psredit','-c','site=LOFAR','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
+  if loud: print "    Initial archive copied"
+
+
 
 def obs_process(fits,cmd_out,overwrite,loud,store_type):
   #Extraxt the observation name from the fits file name
   obs = obs_from_fits(fits)
-  
+ 
   #Create the output directory
   output_dir = '{}/{}'.format(product_folder,obs)
   try: os.makedirs(output_dir)
@@ -108,87 +136,38 @@ def obs_process(fits,cmd_out,overwrite,loud,store_type):
       return
   if loud: print "    Fits file read and destination directory created"
   
+  
+  if store_type == 'fits': process_fits(fits,obs,output_dir,cmd_out,loud)
+  elif store_type == 'ar': process_ar(fits,obs,output_dir,cmd_out,loud)
+  else: 
+    print "ATTENTION! Format not supported. Obs {} will not be processed.".format(obs) 
+    return
 
-  #FULL-RESOLUTION INITIAL ARCHIVE  
-  #Create the initial full-resolution archive from the fits file
-  #subprocess.call(['dspsr','-t','16','-E',ephemeris_file,'-j','zap chan',zaps,'-b','1024','-fft-bench',\
-  #                  '-O','{}_{}'.format(obs,ephemeris_name),'-K','-A','-s','-e','ar','{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  #subprocess.call(['psredit','-c','rcvr:name="HBA"','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  #if loud: print "    Initial full-resolution archive created"
-  #
-  ##Remove RFI and clean the archive
-  #subprocess.call(['clean.py','-o','{}_{}.clean.ar'.format(obs,ephemeris_name),'{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  #if loud: print "    Archive cleaned"
-  #
-  ##Create a time scrunched archive (use for input to pdmp DM refinement)
-  #subprocess.call(['pam','-t','64','-e','t64.ar','{}_{}.clean.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  #if loud: print "    Scrunched archive created"
-  ######################################
-
-  #SCRUNCHED INITIAL ARCHIVE
-  ephemeris = ephemeris_name
-  if store_type == 'fits':
-    #ephemeris = ephemeris_name 
-    #Load information from the fits file
-    zaps = zap_channels('{}/{}'.format(fits_folder,fits))
-    zaps = str(zaps)[1:-1].translate(None,',')
-
-    #Create the initial scrunched archive from the fits file
-    subprocess.call(['dspsr','-t','16','-E',ephemeris_file,'-j','zap chan',zaps,'-b','1024','-fft-bench',\
-                    '-O','{}_{}'.format(obs,ephemeris),'-K','-A','-L','10','-e','ar','{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-    subprocess.call(['psredit','-c','rcvr:name=HBA','-m','{}_{}.ar'.format(obs,ephemeris)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-    if loud: print "    Initial full-resolution archive created"
-
-  elif store_type == 'ar':
-    #ephemeris = 'LOFAR_ephemeris'
-    subprocess.call(['psredit','-c','site=LOFAR','-m','{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-    subprocess.call(['pam','-E',ephemeris_file,'-u',output_dir,'{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-    os.rename('{}/{}'.format(output_dir,fits),'{}/{}_{}.ar'.format(output_dir,obs,ephemeris))    
-    #shutil.copyfile('{}/{}'.format(fits_folder,fits),'{}/{}_{}'.format(output_dir,obs,ephemeris))
-    subprocess.call(['psredit','-c','site=LOFAR','-m','{}_{}.ar'.format(obs,ephemeris)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
 
   #Remove RFI and clean the archive
-  #subprocess.call(['clean.py','-o','{}_{}.clean.ar'.format(obs,ephemeris),'{}_{}.ar'.format(obs,ephemeris)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  subprocess.call(['paz','-e','clean.ar','-r','{}_{}.ar'.format(obs,ephemeris)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
+  subprocess.call(['paz','-e','paz.ar','-r','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
+  subprocess.call(['clean.py','-F','surgical','-o','{}_{}.clean.ar'.format(obs,ephemeris_name),'{}_{}.paz.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
   if loud: print "    Archive cleaned"
 
-  #Create a time scrunched archive (use for input to pdmp DM refinement)
-  subprocess.call(['pam','-t','64','-e','t64.ar','{}_{}.clean.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  if loud: print "    Scrunched archive created"
-
-  #################################
-
+  #Scrunch the archive in time and polarization for DM corrections
+  subprocess.call(['pam','-T','-p','-e','T.ar','{}_{}.clean.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
 
   #Correct for DM variations and apply the new DM to the par file
-  output = subprocess.Popen(['pdmp','-g','{}_correctDM.ps'.format(obs),'{}_{}.clean.t64.ar'.format(obs,ephemeris)],cwd=output_dir,stdout=subprocess.PIPE,stderr=cmd_out)
+  output = subprocess.Popen(['pdmp','-g','{}_correctDM.ps'.format(obs),'{}_{}.clean.T.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=subprocess.PIPE,stderr=cmd_out)
   out, err = output.communicate()
   idx_start = out.find('Best DM')
   idx_end = out.find('\n',idx_start)
   DM = out[idx_start:idx_end].split()[3]
-  write_ephemeris(ephemeris_file,DM,output_dir,ephemeris) 
+  write_ephemeris(ephemeris_file,DM,output_dir,ephemeris_name) 
   if loud: print "    Corrected DM written in new ephemeris file"
 
-  #Create a new full-resolution archive
-  if store_type == 'fits':
-    subprocess.call(['dspsr','-t','16','-E','{}_correctDM.par'.format(ephemeris),'-j','zap chan',zaps,'-b','1024','-fft-bench',\
-                      '-O','{}_correctDM'.format(obs),'-K','-A','-s','-e','ar','{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-    subprocess.call(['psredit','-c','rcvr:name=HBA','-m','{}_correctDM.ar'.format(obs)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-    if loud: print "    Final full-resolution archive created"
-
-  elif store_type == 'ar':
-    #Apply new ephemeris
-    subprocess.call(['pam','-E','{}_correctDM.par'.format(ephemeris),'-u',output_dir,'{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-    os.rename('{}/{}'.format(output_dir,fits),'{}/{}_correctDM.ar'.format(output_dir,obs))
-    subprocess.call(['psredit','-c','site=LOFAR','-m','{}_correctDM.ar'.format(obs)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-
-  #Remove RFI and clean the archive
-  #subprocess.call(['clean.py','-o','{}_correctDM.clean.ar'.format(obs),'{}_correctDM.ar'.format(obs)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  subprocess.call(['paz','-e','clean.ar','-r','{}_correctDM.ar'.format(obs)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  if loud: print "    Archive cleaned"
+  #Apply new DM
+  subprocess.call(['pam','-d','{}'.format(DM),'-e','tmp','{}_{}.clean.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
+  os.rename('{}/{}_{}.clean.tmp'.format(output_dir,obs,ephemeris_name),'{}/{}_correctDM.clean.ar'.format(output_dir,obs))
+  if loud: print "    DM updated"
   
-  #Create a scrunched archive and rotate it
+  #Create a scrunched archive
   subprocess.call(['pam','-T','-F','-p','-e','TF.ar','{}_correctDM.clean.ar'.format(obs)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  subprocess.call(['pam','-r','0.5','-m','{}_correctDM.clean.TF.ar'.format(obs)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
   if loud: print "    Scrunched archive created"
 
   #Plot of the profile of the scrunched archive
@@ -214,24 +193,21 @@ def obs_process(fits,cmd_out,overwrite,loud,store_type):
 
   return
 
-  
-
-
-
-
 
 
 def obs_from_fits(fits):
   idx_start = fits.find('L')
-  if idx_start < 0: idx_start = fits.find('T')
+  #if idx_start < 0: idx_start = fits.find('T')
   if idx_start < 0: idx_start = fits.find('D')
   if idx_start < 0: idx_start = fits.find('_') + 1
 
   #while not fits[idx_start+1].isdigit():
   #  idx_start = fits.find('L',idx_start+1)
   idx_end = idx_start + 1
-  while fits[idx_end].isdigit():
+  while not fits[idx_end] in ['.','_']:
     idx_end += 1
+    if idx_end == len(fits): break  
+
   return fits[idx_start:idx_end]
     
 
@@ -246,22 +222,6 @@ def read_ephemeris(file):
   return dm, p
 
 
-'''
-def plot_profiles(archive,template):
-  def norm_shift(prof,template):
-      prof = prof - np.min(prof)
-      prof = prof / np.max(prof)
-      shift = prof.size/2 - np.correlate(prof,template,mode='same').argmax()
-      prof = np.roll(prof,shift)
-      #prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
-      return prof
-
-  load_archive = psrchive.Archive_load(archive)
-  prof = load_archive.get_data().flatten()
-  prof = norm_shift(prof)
-  date = float(load_archive.get_ephemeris().get_value('MJD'))
-  plt.plot(np.arange(0,1,1./len(prof)),prof,label=int(date))
-'''
 
 
 
@@ -325,6 +285,10 @@ def plot_lists(exclude=False,date_lim=False,template=False,bin_reduc=False):
         if date_lim:
           if not date_lim[0] <= date <= date_lim[1]:
             continue
+
+
+        #Add different observations together
+        '''
         if date in date_list:
           try: obs_list[date_list.index(date)] += prof
           except ValueError:
@@ -334,6 +298,10 @@ def plot_lists(exclude=False,date_lim=False,template=False,bin_reduc=False):
         else:
           date_list.append(date)
           obs_list.append(prof)
+        '''
+
+        date_list.append(date)
+        obs_list.append(prof)
   for obs in obs_list:
     obs -= np.median(obs)
     obs /= np.max(obs)
@@ -449,7 +417,7 @@ if __name__ == '__main__':
 
   #Produce the cumulative plot and exit if the plot argument is given
   if args.p | args.p3d:
-    template = np.load(profile_template)
+    template = psrchive.Archive_load(profile_template).get_data().flatten() 
     if args.p: cum_plot(exclude=args.e,phase_lim=args.phase_lim,date_lim=date_lim,flux_lim=args.flux_lim,template=template,bin_reduc=args.bin_reduc)
     if args.p3d: plot3D(exclude=args.e,phase_lim=args.phase_lim,date_lim=date_lim,flux_lim=args.flux_lim,template=template,bin_reduc=args.bin_reduc)
     exit()
