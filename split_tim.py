@@ -4,40 +4,48 @@ import glob
 import os
 import matplotlib.pyplot as plt
 
-mjd_start = 40585
-mjd_end = 57585
-days = 250
+days = 50
+mjd_start = 55838 + days / 4 * 0   + days
+mjd_end   = 57376 + days / 4 * 0   + days
 
 timing_dir = '/data1/Daniele/B2217+47/timing_analysis/'
-par_file = 'posOK.par'
+par_file = 'B2217_timing_analysis.par'
+tim_file = 'B2217.tim'
+
+mjd_i = 46285.884251715530624
+f0_i = 1.8571179660599825782
+f1_i = -9.5368641371411035478e-15
 
 #Write out the tim files
-tim = np.loadtxt(timing_dir+'B2217_all_t2.tim',skiprows=1,usecols=(2,))
+tim = np.loadtxt(timing_dir+tim_file,skiprows=1,usecols=(2,))
+idx = np.where( (tim >= mjd_start) & (tim <= mjd_end) )[0]
+tim = tim[idx]
+
 hist, bin_hedges = np.histogram(tim,bins=(mjd_end-mjd_start)/days,range=(mjd_start,mjd_end))
 
+with open(timing_dir+tim_file) as file:
+  TOAs = file.readlines()
+TOAs = np.array(TOAs)[idx+1]
+
 count = 0
-with open(timing_dir+'B2217_all_t2.tim') as file:
-  for k,i in enumerate(hist):
-    line = []
-    for j in range(i):
-      line.append(file.readline())
-    if len(line) > 7:
-      count += 1
-      with open('tim' + str(k), 'w') as f:
-        f.write('FORMAT 1\n')
-        for j in line:
-          f.write(j)
-  file.close()
+for i,n in enumerate(hist):
+  line = []
+  for j in range(n):
+    j_start = np.sum( hist[:i] )
+    line.append(TOAs[j_start+j])
+  if len(line) > 12:
+    count += 1
+    with open('tim' + str(i), 'w') as f:
+      f.write('FORMAT 1\n')
+      for j in line:
+        f.write(j)
 
 print "{} tim files created\n".format(count)
+
 #exit()
 
 #Calculate periods
 os.chdir(timing_dir)
-
-mjd_i = 46285.884251715530624
-f0_i = 1.8571179660935379894 
-f1_i = -9.5370607327138547295e-15 
 
 x = []
 y = []
@@ -57,10 +65,9 @@ for i in file_list:
   with open(timing_dir+par_file,'r') as f:
     par = f.readlines()
 
-  par[4] = 'PEPOCH         {}.0  \r\n'.format(date)
-  #par[3] = 'F1             {} 1  3.9857359207474666112e-20\r\n'.format(f1)
+  par[2] = 'PEPOCH         {}.0  \r\n'.format(date)
   f0 = f0_i + (date-mjd_i)*24*3600*f1_i
-  par[2] = 'F0             {}     1  0.00000000000583536460   \r\n'.format(f0)
+  par[0] = 'F0             {}     1  0.00000000000583536460   \r\n'.format(f0)
 
   #mjd = date
 

@@ -1,9 +1,8 @@
 import numpy as np
 import psrchive
 import sys
+import matplotlib.pyplot as plt
 
-
-archive = str(sys.argv[1])
 
 def timeseries(archive):
   times = psrchive.Archive_load(archive).get_data()
@@ -15,13 +14,34 @@ def timeseries(archive):
   return times
 
 
-def pulses_plot(times,start=0,end=100):
+def pulses_plot(times,start=0,end=100,bin_lim=(0,1024)):
   prof = times.sum(axis=0)
   roll_idx = len(prof)-np.argmax(prof)+len(prof)/2
   times = np.roll(times, roll_idx, axis=1)
-  for i in range(start,end):
-    plt.plot(times[i]+i,'k')
-  plt.xlim((0,1024))
+  
+  n_col = int((end-start)/10)
+  if (end-start)%10 != 0: n_col += 1 
+  f, axarr = plt.subplots(1, n_col, sharey=True, figsize=(5*n_col,20))
+
+  try:
+    for idx, ax_i in enumerate(axarr):
+      i = idx * 10
+      for j in range(10):
+        ax_i.plot(times[i+j]+j,'k')
+    
+      ax_i.set_xlim(bin_lim)
+      ax_i.set_ylim((0,10))
+      ax_i.set_title("bin0 = {}".format(i))
+  
+  except TypeError:
+    for j in range(start,end):
+      axarr.plot(times[j]+j,'k')
+    
+    axarr.set_xlim(bin_lim)
+    axarr.set_ylim((0,10))
+    axarr.set_title("bin0 = {}".format(start))
+
+  plt.tight_layout()
   plt.show()
 
 

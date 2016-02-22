@@ -25,7 +25,7 @@ ephemeris_file  = ephemeris_folder + '/' + ephemeris_name + '.par'
 fits_folder     = home_folder + '/raw'
 product_folder  = home_folder + '/Products'
 plot_folder     = home_folder + '/Plots'
-profile_template= home_folder + '/ephemeris/151109_profile_template.std'
+profile_template= home_folder + '/ephemeris/160128_profile_template_512.std'
 
 
 def create_profile(args,verbose,overwrite,loud,parallel,exclude=False):
@@ -111,7 +111,7 @@ def process_ar(fits,obs,output_dir,cmd_out,loud):
   #print 'pam','-E',ephemeris_file,'-u',output_dir,'{}/{}'.format(fits_folder,fits)
   os.rename('{}/{}'.format(output_dir,fits),'{}/{}_{}.ar'.format(output_dir,obs,ephemeris_name))
   subprocess.call(['psredit','-c','name=B2217+47','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  output = subprocess.Popen(['psredit','-c','site','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=subprocess.PIPE,stderr=cmd_out)  
+  output = subprocess.Popen(['psrchive','-c','site','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=subprocess.PIPE,stderr=cmd_out)  
   out, err = output.communicate()  
   idx = out.find('site=')
   if out[idx+5] == 't':
@@ -179,11 +179,11 @@ def obs_process(fits,cmd_out,overwrite,loud,store_type):
   nsub = out.split()[-2]
   length = out.split()[-1]  #Observation duration (s)
   sub_length = float(length) / float(nsub)
-  length_parameter = int(60 / sub_length)
+  length_parameter = int(60. / sub_length)
   subprocess.call(['pam','-t',str(length_parameter),'-F','-p','-e','t60F.ar','{}_correctDM.clean.ar'.format(obs)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
 
   #Generate the TOAs
-  output = subprocess.Popen(['pat','-s',profile_template,'{}_correctDM.clean.t60F.ar'.format(obs)],cwd=output_dir,stdout=subprocess.PIPE,stderr=cmd_out)
+  output = subprocess.Popen(['pat','-s',profile_template,'-f','tempo2','{}_correctDM.clean.t60F.ar'.format(obs)],cwd=output_dir,stdout=subprocess.PIPE,stderr=cmd_out)
   out, err = output.communicate()
   idx = out[::-1].find('\n',1)
   out = out[:-idx]
@@ -263,7 +263,7 @@ def plot_lists(exclude=False,date_lim=False,template=False,bin_reduc=False):
       if obs in exclude:
         continue
     if os.path.isdir(os.path.join(product_folder,obs)):
-      archive = '{}/{}/{}_correctDM.clean.TF.ar'.format(product_folder,obs,obs)
+      archive = '{}/{}/{}_correctDM.clean.TF.b512.ar'.format(product_folder,obs,obs)
 
       if os.path.isfile(archive):
         load_archive = psrchive.Archive_load(archive)
@@ -309,8 +309,11 @@ def plot_lists(exclude=False,date_lim=False,template=False,bin_reduc=False):
   return date_list,obs_list
 
 
-def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,template=False,bin_reduc=False):
-  date_list,obs_list = plot_lists(exclude,date_lim,template,bin_reduc)
+def cum_plot(date_list,obs_list,phase_lim=False,date_lim=False,flux_lim=False,exclude=False,template=False,bin_reduc=False):
+  #date_list,obs_list = plot_lists(exclude,date_lim,template,bin_reduc)
+
+  
+
   fig = plt.figure(figsize=(5,10))
   ax = fig.add_subplot(111)
 
@@ -318,7 +321,7 @@ def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,templat
   m = cm.ScalarMappable(norm=norm, cmap='copper_r')
   
   base_y = np.min([date.toordinal() for date in date_list])
-  scale_y = 0.001 / np.min(np.diff(sorted(date_list))).days
+  scale_y = 0.001 / np.min(np.diff(np.unique(date_list))).days
   obs_max = 0
   obs_min = 1
   for idx,obs in enumerate(obs_list):
@@ -349,7 +352,7 @@ def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,templat
   ax.tick_params(axis='y', labelsize=6)
   #Save the plot 
   plot_name = 'profiles'
-  plt.savefig('{}/{}_{}.png'.format(plot_folder,time.strftime("%Y%m%d-%H%M%S"),plot_name),format='png',dpi=200)
+  #plt.savefig('{}/{}_{}.png'.format(plot_folder,time.strftime("%Y%m%d-%H%M%S"),plot_name),format='png',dpi=200)
 
 
 
