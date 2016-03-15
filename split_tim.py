@@ -4,13 +4,13 @@ import glob
 import os
 import matplotlib.pyplot as plt
 
-days = 50
+days = 60
 mjd_start = 55838 + days / 4 * 0   + days
 mjd_end   = 57376 + days / 4 * 0   + days
 
 timing_dir = '/data1/Daniele/B2217+47/timing_analysis/'
 par_file = 'B2217_timing_analysis.par'
-tim_file = 'B2217.tim'
+tim_file = 'LOFAR_few.tim'
 
 mjd_i = 46285.884251715530624
 f0_i = 1.8571179660599825782
@@ -33,7 +33,7 @@ for i,n in enumerate(hist):
   for j in range(n):
     j_start = np.sum( hist[:i] )
     line.append(TOAs[j_start+j])
-  if len(line) > 12:
+  if len(line) > 9:
     count += 1
     with open('tim' + str(i), 'w') as f:
       f.write('FORMAT 1\n')

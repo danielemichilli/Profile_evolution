@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 
 
 def timeseries(archive):
+  '''
+  Load the archive
+  '''
   times = psrchive.Archive_load(archive).get_data()
   times = np.sum(times,axis=(1,2))
 
@@ -15,6 +18,9 @@ def timeseries(archive):
 
 
 def pulses_plot(times,start=0,end=100,bin_lim=(0,1024)):
+  '''
+  Plot the singlepulses
+  '''
   prof = times.sum(axis=0)
   roll_idx = len(prof)-np.argmax(prof)+len(prof)/2
   times = np.roll(times, roll_idx, axis=1)
@@ -46,6 +52,9 @@ def pulses_plot(times,start=0,end=100,bin_lim=(0,1024)):
 
 
 def giant_pulses(times,rel_hight=0.06,left_lim=60,right_lim=980):
+  '''
+  Detect giant pulses in the data
+  '''
   prof = times.sum(axis=0)
   roll_idx = len(prof)-np.argmax(prof)
   times = np.roll(times, roll_idx, axis=1)

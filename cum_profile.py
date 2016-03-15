@@ -98,7 +98,7 @@ def process_fits(fits,obs,output_dir,cmd_out,loud):
   zaps = str(zaps)[1:-1].translate(None,',')
 
   #Create the initial scrunched archive from the fits file
-  subprocess.call(['dspsr','-t','16','-E',ephemeris_file,'-j','zap chan',zaps,'-b','1024','-fft-bench',\
+  subprocess.call(['dspsr','-S','0.1','-t','16','-E',ephemeris_file,'-j','zap chan',zaps,'-b','1024','-fft-bench',\
                   '-O','{}_{}'.format(obs,ephemeris_name),'-K','-A','-s','-e','ar','{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
   subprocess.call(['psredit','-c','rcvr:name=HBA','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
   if loud: print "    Initial full-resolution archive created"
@@ -276,7 +276,7 @@ def plot_lists(exclude=False,date_lim=False,template=False,bin_reduc=False):
           if bin_reduc:
             template = template.reshape(512,-1).mean(axis=1)
           bins = prof.size
-          prof_ext = np.concatenate((prof[-bins/2:],prof,prof[bins/2:]))
+          prof_ext = np.concatenate((prof[-bins/2:],prof,prof[:bins/2]))
           shift = prof.size/2 - np.correlate(prof_ext,template,mode='valid').argmax()
           prof = np.roll(prof,shift)
         else: prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)

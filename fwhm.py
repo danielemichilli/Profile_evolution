@@ -6,82 +6,84 @@ import datetime
 
 home_folder     = '/data1/Daniele/B2217+47'
 product_folder  = home_folder + '/Products'
+W_fract = 0.1
 
+def width():
+  '''
+  Return the list of observation date, main component duration and file name for all the observations
+  '''
 
-def width_fwhm():
-  date_list, obs_list, freq_list = plot_lists()
-  fwhm_list = []
+  date_list, obs_list, file_list = observations_lists()
+
+  #Calculate the duration list
+  duration_list = []
   for prof in obs_list:
-    peak = np.where(prof>=0.10)[0]   #Percentage
+    peak = np.where(prof>=W_fract)[0]
     width = peak.max() - peak.min()
-    #width = float(width) / prof.size
-    fwhm_list.append(width)
-  return date_list, fwhm_list, freq_list
+    #width = float(width) / prof.size  #Convert the duration in phase from bins
+    duration_list.append(width)
+
+  return date_list, duration_list, file_list
 
 
 
+def observations_lists():
+  '''
+  Return the list of observation date, pulse profile and file name for all the observations 
+  '''
 
-
-def plot_lists():
   date_list = []
   obs_list = []
-  freq_list = []
+  file_list = []
 
   for obs in os.listdir(product_folder):
     if os.path.isdir(os.path.join(product_folder,obs)):
       archive = '{}/{}/{}_correctDM.clean.TF.b512.ar'.format(product_folder,obs,obs)
 
       if os.path.isfile(archive):
-        date, prof, freq = load_archive(obs)
+        date, prof, file_name = load_archive(obs,archive)
 
         date_list.append(date)
         obs_list.append(prof)
-        freq_list.append(freq)
+        file_list.append(file_name)
 
-  #for obs in obs_list:
-  #  obs -= np.median(obs)
-  #  obs /= np.max(obs)
-
+  #Sort the lists by date
   idx = np.argsort(date_list)
-  return np.array(date_list)[idx], np.array(obs_list)[idx], np.array(freq_list)[idx]
+  return np.array(date_list)[idx], np.array(obs_list)[idx], np.array(file_list)[idx]
 
 
-def load_archive(obs):
-  archive = '{}/{}/{}_correctDM.clean.TF.b512.ar'.format(product_folder,obs,obs)
+def load_archive(obs,archive):
+  '''
+  Load the single observations and return observation date, pulse profile and file name for each
+  '''
 
+  #Load, calibrate and align the profile
   load_archive = psrchive.Archive_load(archive)
   prof = load_archive.get_data().flatten()
-  prof -= np.median(prof)
-  prof /= np.max(prof)
-  prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
+  prof -= np.median(prof)  #Profile median is set to 0
+  prof /= np.max(prof)  #Profile peak is set to 1 (relative units)
+  prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)  #Align the peak to the phase middle
 
+  #Load date and filename of the observation
   epoch = load_archive.get_Integration(0).get_epoch()
   date = datetime.date(int(epoch.datestr('%Y')), int(epoch.datestr('%m')), int(epoch.datestr('%d')))
 
-  freq = load_archive.get_centre_frequency() 
-        
-  #freq = load_archive.get_filename()         
+  file_name = load_archive.get_filename()         
 
-  return date, prof, freq
-
-
-
-
-
+  return date, prof, file_name
 
 
 
 if __name__ == "__main__":
-  date_list, fwhm_list, freq_list = width_fwhm()
-  '''
-  fwhm_list = [x for (y,x) in sorted(zip(date_list,fwhm_list), key=lambda pair: pair[0])]
-  date_list = sorted(date_list)
-  plt.plot(date_list,fwhm_list,'ko-')
+  date_list, duration_list, file_list = width()
+  
+  #Plot the results
+  plt.plot(date_list,duration_list,'ko-')
   plt.xlim((min(date_list)-datetime.timedelta(days=30),max(date_list)+datetime.timedelta(days=30)))
   plt.show()
-  '''
 
+  #Save the arrays
   np.save('date',date_list)
-  np.save('fwhm',fwhm_list)
-  np.save('file',freq_list)
+  np.save('duration',duration_list)
+  np.save('file',file_list)
 
