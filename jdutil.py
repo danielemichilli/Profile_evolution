@@ -358,7 +358,7 @@ def jd_to_datetime(jd):
     
     hour,min,sec,micro = days_to_hmsm(frac_days)
     
-    return datetime(year,month,day,hour,min,sec,micro)
+    return dt.datetime(year,month,day,hour,min,sec,micro)
 
 
 def timedelta_to_days(td):

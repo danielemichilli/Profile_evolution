@@ -21,6 +21,7 @@ def pulses_plot(times,start=0,end=100,bin_lim=(0,1024)):
   '''
   Plot the singlepulses
   '''
+  if isinstance(times, basestring): times = timeseries(times)
   prof = times.sum(axis=0)
   roll_idx = len(prof)-np.argmax(prof)+len(prof)/2
   times = np.roll(times, roll_idx, axis=1)
@@ -70,5 +71,5 @@ if __name__ == "__main__":
   archive = str(sys.argv[1])
   times = timeseries(archive)
   giant_pulses(times,rel_hight,left_lim,right_lim)
-  pulses_plot(times)
+  pulses_plot(times=times)
 

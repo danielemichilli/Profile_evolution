@@ -15,7 +15,6 @@ from multiprocessing.pool import ThreadPool
 from mpl_toolkits.mplot3d import proj3d
 import datetime
 import matplotlib as mpl
-import matplotlib.cm as cm
 
 home_folder     = '/data1/Daniele/B2217+47'
 ephemeris_name  = '20111114_JB'
@@ -111,11 +110,6 @@ def process_ar(fits,obs,output_dir,cmd_out,loud):
   #print 'pam','-E',ephemeris_file,'-u',output_dir,'{}/{}'.format(fits_folder,fits)
   os.rename('{}/{}'.format(output_dir,fits),'{}/{}_{}.ar'.format(output_dir,obs,ephemeris_name))
   subprocess.call(['psredit','-c','name=B2217+47','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
-  output = subprocess.Popen(['psrchive','-c','site','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=subprocess.PIPE,stderr=cmd_out)  
-  out, err = output.communicate()  
-  idx = out.find('site=')
-  if out[idx+5] == 't':
-    subprocess.call(['psredit','-c','site=LOFAR','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
   if loud: print "    Initial archive copied"
 
 
@@ -143,6 +137,11 @@ def obs_process(fits,cmd_out,overwrite,loud,store_type):
     print "ATTENTION! Format not supported. Obs {} will not be processed.".format(obs) 
     return
 
+  output = subprocess.Popen(['psredit','-c','site','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=subprocess.PIPE,stderr=cmd_out)
+  out, err = output.communicate()
+  idx = out.find('site=')
+  if out[idx+5] == 't':
+    subprocess.call(['psredit','-c','site=LOFAR','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
 
   #Remove RFI and clean the archive
   subprocess.call(['paz','-e','paz.ar','-r','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
@@ -263,29 +262,25 @@ def plot_lists(exclude=False,date_lim=False,template=False,bin_reduc=False):
       if obs in exclude:
         continue
     if os.path.isdir(os.path.join(product_folder,obs)):
-      archive = '{}/{}/{}_correctDM.clean.TF.b512.ar'.format(product_folder,obs,obs)
+      if bin_reduc: archive = '{}/{}/{}_correctDM.clean.TF.b512.ar'.format(product_folder,obs,obs)
+      else: archive = '{}/{}/{}_correctDM.clean.TF.b1024.ar'.format(product_folder,obs,obs)
 
       if os.path.isfile(archive):
         load_archive = psrchive.Archive_load(archive)
-        prof = load_archive.get_data().flatten()
-        if bin_reduc:
-          prof = prof.reshape(512,-1).mean(axis=1)
-        prof -= np.median(prof)
-        prof /= np.max(prof)
-        if isinstance(template,np.ndarray):
-          if bin_reduc:
-            template = template.reshape(512,-1).mean(axis=1)
-          bins = prof.size
-          prof_ext = np.concatenate((prof[-bins/2:],prof,prof[:bins/2]))
-          shift = prof.size/2 - np.correlate(prof_ext,template,mode='valid').argmax()
-          prof = np.roll(prof,shift)
-        else: prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
         epoch = load_archive.get_Integration(0).get_epoch()
         date = datetime.date(int(epoch.datestr('%Y')), int(epoch.datestr('%m')), int(epoch.datestr('%d')))
         if date_lim:
           if not date_lim[0] <= date <= date_lim[1]:
             continue
-
+        prof = load_archive.get_data().flatten()
+        prof -= np.median(prof)
+        prof /= np.max(prof)
+        if isinstance(template,np.ndarray):
+          bins = prof.size
+          prof_ext = np.concatenate((prof[-bins/2:],prof,prof[:bins/2]))
+          shift = prof.size/2 - np.correlate(prof_ext,template,mode='valid').argmax()
+          prof = np.roll(prof,shift)
+        else: prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
 
         #Add different observations together
         '''
@@ -309,16 +304,14 @@ def plot_lists(exclude=False,date_lim=False,template=False,bin_reduc=False):
   return date_list,obs_list
 
 
-def cum_plot(date_list,obs_list,phase_lim=False,date_lim=False,flux_lim=False,exclude=False,template=False,bin_reduc=False):
-  #date_list,obs_list = plot_lists(exclude,date_lim,template,bin_reduc)
-
-  
+def cum_plot(phase_lim=False,date_lim=False,flux_lim=False,exclude=False,template=False,bin_reduc=False):
+  date_list,obs_list = plot_lists(exclude,date_lim,template,bin_reduc)
 
   fig = plt.figure(figsize=(5,10))
   ax = fig.add_subplot(111)
 
   norm = mpl.colors.Normalize(vmin=min(date_list).toordinal(), vmax=max(date_list).toordinal())  
-  m = cm.ScalarMappable(norm=norm, cmap='copper_r')
+  m = mpl.cm.ScalarMappable(norm=norm, cmap='copper_r')
   
   base_y = np.min([date.toordinal() for date in date_list])
   scale_y = 0.001 / np.min(np.diff(np.unique(date_list))).days
@@ -352,7 +345,7 @@ def cum_plot(date_list,obs_list,phase_lim=False,date_lim=False,flux_lim=False,ex
   ax.tick_params(axis='y', labelsize=6)
   #Save the plot 
   plot_name = 'profiles'
-  #plt.savefig('{}/{}_{}.png'.format(plot_folder,time.strftime("%Y%m%d-%H%M%S"),plot_name),format='png',dpi=200)
+  plt.savefig('{}/{}_{}.png'.format(plot_folder,time.strftime("%Y%m%d-%H%M%S"),plot_name),format='png',dpi=200)
 
 
 

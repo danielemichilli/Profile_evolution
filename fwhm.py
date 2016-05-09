@@ -38,7 +38,7 @@ def observations_lists():
 
   for obs in os.listdir(product_folder):
     if os.path.isdir(os.path.join(product_folder,obs)):
-      archive = '{}/{}/{}_correctDM.clean.TF.b512.ar'.format(product_folder,obs,obs)
+      archive = '{}/{}/{}_correctDM.clean.TF.b1024.ar'.format(product_folder,obs,obs)
 
       if os.path.isfile(archive):
         date, prof, file_name = load_archive(obs,archive)

@@ -8,7 +8,7 @@ from io import StringIO
 home_folder     = '/data1/Daniele/B2217+47'
 product_folder  = home_folder + '/Products/'
 profile_template= home_folder + '/ephemeris/151109_profile_template.std'
-par_file        = home_folder + '/Timing/LOFAR_temp.par'
+par_file        = home_folder + '/Timing/LOFAR.par'
 
 print "Process starting..."
 
@@ -17,6 +17,7 @@ obs_list = os.listdir(product_folder)
 #Loop all the folders
 for obs_name in obs_list:
   if not os.path.isdir(product_folder+obs_name): continue
+  if not os.path.isfile('{}{}/{}_correctDM.clean.ar'.format(product_folder,obs_name,obs_name)): continue
   print "Obs. {} is being processed".format(obs_name)
 
   obs_path = product_folder+obs_name+'/'
@@ -25,7 +26,7 @@ for obs_name in obs_list:
     #Scrunch the archive to 7 channels
     archive_name = obs_path + obs_name + '_correctDM.clean.ar'
     archive = psrchive.Archive_load(archive_name)
-    chans_fact = archive.get_nchan() / 17
+    chans_fact = archive.get_nchan() / 16
     nbin = archive.get_nbin()
     if nbin>1024:
       subprocess.call(['pam','-Tp','-f',str(chans_fact),'-e','TF16.ar','--setnbin','1024',archive_name],cwd=obs_path)
@@ -52,7 +53,7 @@ for obs_name in obs_list:
     output = subprocess.Popen(['tempo2','-output','general','-s','startDM {dm_p} endDM\n','-f',par_file,'{}_F16.tim'.format(obs_name)],cwd=obs_path,stdout=subprocess.PIPE)
     out, err = output.communicate()
     start = out.find('startDM') + 8
-    if start==-1:
+    if start==7:
       print "ATTENTION: obs. {} not processed correctly".format(obs_name)
       continue
     end = out[start:].find('(')
