@@ -29,9 +29,9 @@ for obs_name in obs_list:
     chans_fact = archive.get_nchan() / 16
     nbin = archive.get_nbin()
     if nbin>1024:
-      subprocess.call(['pam','-Tp','-f',str(chans_fact),'-e','TF16.ar','--setnbin','1024',archive_name],cwd=obs_path)
+      subprocess.call(['pam','-Tp','-f',str(chans_fact),'--DD','-e','TF16.ar','--setnbin','1024',archive_name],cwd=obs_path)
     else:
-      subprocess.call(['pam','-Tp','-f',str(chans_fact),'-e','TF16.ar',archive_name],cwd=obs_path)
+      subprocess.call(['pam','-Tp','-f',str(chans_fact),'--DD','-e','TF16.ar',archive_name],cwd=obs_path)
 
   if not os.path.isfile('{}/{}_F16.tim'.format(obs_path,obs_name)):
     #Calculate the TOAs

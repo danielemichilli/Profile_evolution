@@ -73,11 +73,18 @@ if __name__ == "__main__":
 #Usage of the lists
 import numpy as np
 import matplotlib.pyplot as plt
+from dm import dm_list
+
+date_list, pdmp_list, tempo_list, telescope_list, obs_list, num_list = dm_list() 
+
+telescope_list[telescope_list == 'Effelsberg'] = 'DE601'
+telescope_list[telescope_list == 'Eff'] = 'DE601'
 
 telescopes = np.unique(telescope_list)
 
 for t in telescopes:
   idx = np.where(telescope_list == t)[0]
+  #if t == 'LOFAR': continue
   plt.plot(date_list[idx], tempo_list[idx], label=t)
 
 plt.legend()
