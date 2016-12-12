@@ -15,6 +15,8 @@ from multiprocessing.pool import ThreadPool
 from mpl_toolkits.mplot3d import proj3d
 import datetime
 import matplotlib as mpl
+from jdutil import mjd2date 
+
 
 home_folder     = '/data1/Daniele/B2217+47'
 ephemeris_name  = '20111114_JB'
@@ -93,11 +95,12 @@ def execute_process(obs_list,cmd_out,overwrite,loud):
 
 def process_fits(fits,obs,output_dir,cmd_out,loud):
   #SCRUNCHED INITIAL ARCHIVE
-  zaps = zap_channels('{}/{}'.format(fits_folder,fits))
-  zaps = str(zaps)[1:-1].translate(None,',')
+  zaps = zap_channels(obs)
 
   #Create the initial scrunched archive from the fits file
-  subprocess.call(['dspsr','-S','0.1','-t','16','-E',ephemeris_file,'-j','zap chan',zaps,'-b','1024','-fft-bench',\
+  if zaps: subprocess.call(['dspsr','-S','0.1','-t','16','-E',ephemeris_file,'-j','zap chan',zaps,'-b','1024','-fft-bench',\
+                  '-O','{}_{}'.format(obs,ephemeris_name),'-K','-A','-s','-e','ar','{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
+  else: subprocess.call(['dspsr','-S','0.1','-t','16','-E',ephemeris_file,'-b','1024','-fft-bench',\
                   '-O','{}_{}'.format(obs,ephemeris_name),'-K','-A','-s','-e','ar','{}/{}'.format(fits_folder,fits)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
   subprocess.call(['psredit','-c','rcvr:name=HBA','-m','{}_{}.ar'.format(obs,ephemeris_name)],cwd=output_dir,stdout=cmd_out,stderr=cmd_out)
   if loud: print "    Initial full-resolution archive created"
@@ -238,21 +241,83 @@ def write_ephemeris(ephemeris_file,DM,cwd,ephemeris_name):
 
 
 def zap_channels(file):
-  fits = pyfits.open(file)
-  header = fits['SUBINT'].header
+  channels = 'zap chan 0 16 32 48 64 80 96 112 128 144 160 176 192 208 224 240 256 272 288 304 320 336 352 368 384 400 416 432 448 464 480 496 512 528 544 560 576 592 608 624 640 656 672 688 704 720 736 752 768 784 800 816 832 848 864 880 896 912 928 944 960 976 992 1008 1024 1040 1056 1072 1088 1104 1120 1136 1152 1168 1184 1200 1216 1232 1248 1264 1280 1296 1312 1328 1344 1360 1376 1392 1408 1424 1440 1456 1472 1488 1504 1520 1536 1552 1568 1584 1600 1616 1632 1648 1664 1680 1696 1712 1728 1744 1760 1776 1792 1808 1824 1840 1856 1872 1888 1904 1920 1936 1952 1968 1984 2000 2016 2032 2048 2064 2080 2096 2112 2128 2144 2160 2176 2192 2208 2224 2240 2256 2272 2288 2304 2320 2336 2352 2368 2384 2400 2416 2432 2448 2464 2480 2496 2512 2528 2544 2560 2576 2592 2608 2624 2640 2656 2672 2688 2704 2720 2736 2752 2768 2784 2800 2816 2832 2848 2864 2880 2896 2912 2928 2944 2960 2976 2992 3008 3024 3040 3056 3072 3088 3104 3120 3136 3152 3168 3184 3200 3216 3232 3248 3264 3280 3296 3312 3328 3344 3360 3376 3392 3408 3424 3440 3456 3472 3488 3504 3520 3536 3552 3568 3584 3600 3616 3632 3648 3664 3680 3696 3712 3728 3744 3760 3776 3792 3808 3824'
 
-  N_channels = header['NCHAN']
-  N_subbands = np.int(np.round(200./1024/header['CHAN_BW']))
-  
-  #obs_date = fits['PRIMARY'].header['DATE-OBS']
-  #obs_date = obs_date[:10].translate(None,'-')
+  if file == 'L32532' or file == 'L33176' or file == 'L33177' or file == 'L24309': return channels
+  elif file=='L59838' or file == 'L24037' or file == 'L24038' : return False 
+  else: 
+    print "ATTENTION: Obs. not known, void channels will not be zapped!"
+    return False
 
-  fits.close()
 
-  zap_channels = range(0,N_channels,N_subbands)
 
-  return zap_channels#, obs_date
-  
+def load_early_single_obs(archive,template=False):
+  with open(archive) as f:
+    lines = f.readlines()
+    mjd = float(lines[3].split('=')[-1])
+    date = mjd2date(mjd)
+  prof = np.loadtxt(archive,usecols=[1,])
+  prof -= np.median(prof)
+  prof /= np.max(prof)
+  if isinstance(template,np.ndarray):
+    bins = prof.size
+    prof_ext = np.concatenate((prof[-bins/2:],prof,prof[:bins/2]))
+    shift = prof.size/2 - np.correlate(prof_ext,template,mode='valid').argmax()
+    prof = np.roll(prof,shift)
+  else: prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
+  return date, prof
+
+def load_early_obs(template=False,bin_reduc=False):
+  date_list = []
+  obs_list = []
+  for obs in os.listdir(product_folder):
+    if os.path.isdir(os.path.join(product_folder,obs)):
+      archive = '{}/{}/{}_PSR_2217+47.pfd.bestprof'.format(product_folder,obs,obs)
+
+      if os.path.isfile(archive):
+        #print archive
+        date,prof = load_early_single_obs(archive,template=template)
+       
+        date_list.append(date)
+        obs_list.append(prof)
+
+  return date_list,obs_list
+
+
+
+def load_archive(archive,template=False,date_lim=False):
+  load_archive = psrchive.Archive_load(archive)
+  load_archive.remove_baseline()
+  epoch = load_archive.get_Integration(0).get_epoch()
+  date = datetime.date(int(epoch.datestr('%Y')), int(epoch.datestr('%m')), int(epoch.datestr('%d')))
+  if date_lim:
+    if not date_lim[0] <= date <= date_lim[1]:
+     return -1, -1 
+  prof = load_archive.get_data().flatten()
+  #prof -= np.median(prof)
+  prof /= np.max(prof)
+  if isinstance(template,np.ndarray):
+    bins = prof.size
+    prof_ext = np.concatenate((prof[-bins/2:],prof,prof[:bins/2]))
+    shift = bins/2 - np.correlate(prof_ext,template,mode='valid').argmax()
+    prof = np.roll(prof,shift)
+  else: prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
+
+  #Add different observations together
+  '''
+  if date in date_list:
+    try: obs_list[date_list.index(date)] += prof
+    except ValueError:
+      print "Archive {} has a different number of bins!".format(obs)
+      date_list.append(date)
+      obs_list.append(prof)
+  else:
+    date_list.append(date)
+    obs_list.append(prof)
+  '''
+
+  return date, prof
+
 
 def plot_lists(exclude=False,date_lim=False,template=False,bin_reduc=False):
   date_list = []
@@ -266,40 +331,15 @@ def plot_lists(exclude=False,date_lim=False,template=False,bin_reduc=False):
       else: archive = '{}/{}/{}_correctDM.clean.TF.b1024.ar'.format(product_folder,obs,obs)
 
       if os.path.isfile(archive):
-        load_archive = psrchive.Archive_load(archive)
-        epoch = load_archive.get_Integration(0).get_epoch()
-        date = datetime.date(int(epoch.datestr('%Y')), int(epoch.datestr('%m')), int(epoch.datestr('%d')))
-        if date_lim:
-          if not date_lim[0] <= date <= date_lim[1]:
-            continue
-        prof = load_archive.get_data().flatten()
-        prof -= np.median(prof)
-        prof /= np.max(prof)
-        if isinstance(template,np.ndarray):
-          bins = prof.size
-          prof_ext = np.concatenate((prof[-bins/2:],prof,prof[:bins/2]))
-          shift = prof.size/2 - np.correlate(prof_ext,template,mode='valid').argmax()
-          prof = np.roll(prof,shift)
-        else: prof = np.roll(prof,(len(prof)-np.argmax(prof))+len(prof)/2)
-
-        #Add different observations together
-        '''
-        if date in date_list:
-          try: obs_list[date_list.index(date)] += prof
-          except ValueError:
-            print "Archive {} has a different number of bins!".format(obs)
+        date, prof = load_archive(archive,template,date_lim)
+        if date != -1:
+          if bin_reduc | (prof.size == 1024):
             date_list.append(date)
             obs_list.append(prof)
-        else:
-          date_list.append(date)
-          obs_list.append(prof)
-        '''
 
-        date_list.append(date)
-        obs_list.append(prof)
-  for obs in obs_list:
-    obs -= np.median(obs)
-    obs /= np.max(obs)
+  #for obs in obs_list:
+  #  obs -= np.median(obs)
+  #  obs /= np.max(obs)
 
   return date_list,obs_list
 

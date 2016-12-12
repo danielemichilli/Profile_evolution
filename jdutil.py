@@ -47,7 +47,7 @@ def mjd2date(mjd):
     jd = mjd_to_jd(mjd)
     date = jd_to_datetime(jd)
 
-    return date
+    return date.date()
 
 
 def mjd_to_jd(mjd):
