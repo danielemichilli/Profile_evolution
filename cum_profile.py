@@ -293,7 +293,7 @@ def load_archive(archive,template=False,date_lim=False):
   if date_lim:
     if not date_lim[0] <= date <= date_lim[1]:
      return -1, -1 
-  prof = load_archive.get_data().flatten()
+  prof = load_archive.get_data().squeeze()
   #prof -= np.median(prof)
   prof /= np.max(prof)
   if isinstance(template,np.ndarray):
