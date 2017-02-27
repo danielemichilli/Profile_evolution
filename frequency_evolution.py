@@ -1,27 +1,72 @@
 import psrchive
-import numpy as np
 import matplotlib.pyplot as plt
-import sys
+import numpy as np
 
-archive = '/data1/daniele/B2217+47/Products/{}/{}_correctDM.clean.T.ar'.format(sys[1])
 
-load_archive = psrchive.Archive_load(archive)
-load_archive.remove_baseline()
-prof = load_archive.get_data()
+archive = '/data1/Daniele/B2217+47/Analysis/DM/L32532.dm'
 
-m = np.max(prof,axis=0)
-prof = prof / m
-prof = prof.T
-for i in range(16):
-  prof[i] = np.roll(prof[i],(len(prof[i])-np.argmax(prof[i]))+len(prof[i])/2)
+#chan 1643 corrupted
 
-peakp = []
-peakposp = []
-for i in range(16):
-  peakp.append(np.max(prof[i,530:]))
-  peakposp.append(np.argmax(prof[i,530:])+530)
+ar = psrchive.Archive_load(archive)
+ar.remove_baseline()
+ar.dedisperse()
+#ar.fscrunch_to_nchan(16)
+min_freq = ar.get_Profile(0, 0, 0).get_centre_frequency()
+max_freq = ar.get_Profile(0, 0, ar.get_nchan()-1).get_centre_frequency()
 
-plt.plot(peakp,'kx')
+profs = ar.get_data().squeeze()
+profs[1643] = 0
+
+ar.fscrunch()
+template = ar.get_data().squeeze()
+
+bins = profs.shape[1]
+
+#for i in range(profs.shape[0]):
+#  prof_ext = np.concatenate((profs[i,-bins/2:],profs[i],profs[i,:bins/2]))
+#  shift = bins/2 - np.correlate(prof_ext,template,mode='valid').argmax()
+#  profs[i] = np.roll(profs[i],shift)
+
+
+# Relative spectral index
+
+main = profs[:, 80:100]
+post = profs[:, 100:115]
+freqs = np.linspace(min_freq, max_freq, profs.shape[0])
+
+main_area = main.sum(axis=1)
+post_area = post.sum(axis=1)
+plt.plot(freqs, post_area/main_area, 'ko')
+
+main_peak = main.max(axis=1)
+post_peak = post.max(axis=1)
+plt.plot(freqs, post_peak/main_peak, 'r^')
+
+
 plt.show()
 
+
+# DM values
+main_temp = np.load('/data1/Daniele/B2217+47/Analysis/DM/main_template.npy')
+post_temp = np.load('/data1/Daniele/B2217+47/Analysis/DM/post_template.npy')
+
+main_pos = []
+for prof in profs:
+  prof_ext = np.concatenate((prof[-bins/2:],prof,prof[:bins/2]))
+  corr = np.correlate(prof_ext,main_temp,mode='valid')
+  main_pos.append(corr.argmax())
+main_pos = np.array(main_pos)
+main_pos = main_pos[main_pos>0]
+
+post_pos = []
+for prof in profs[:, 100:]:
+  prof_ext = np.concatenate((prof[-bins/2:],prof,prof[:bins/2]))
+  corr = np.correlate(prof_ext,post_temp,mode='valid')
+  post_pos.append(corr.argmax())
+post_pos = np.array(post_pos)
+post_pos = post_pos[post_pos>0]
+
+DM = post_pos + 100 - main_pos
+plt.plot(DM, 'ko')
+plt.show()
 

@@ -12,14 +12,14 @@ template_name = '/data1/Daniele/B2217+47/ephemeris/160128_profile_template_512.s
 archives_folder = '/data1/Daniele/B2217+47/Archives_updated'
 early_archives_folder = '/data1/Daniele/B2217+47/Archives_updated/early_obs'
 
-def plot_image(ax):
+def plot(ax, multiplot=True, date_min=datetime.date(2013,01,01)):
   #Load template
   template_load = psrchive.Archive_load(template_name)
   template_load.remove_baseline()
   template = template_load.get_data().flatten()
 
   #Load LOFAR observations
-  dates, observations = load_obs_list(template=template)
+  dates, observations = load_obs_list(template=template, date_min=date_min)
 
   #Average Observations on the same day
   date_uniq, idx_uniq, repeated = np.unique(dates, return_index=True, return_counts=True)
@@ -30,34 +30,53 @@ def plot_image(ax):
     obs_rep = np.sum(observations[date_rep], axis=0)
     obs_uniq[i] = obs_rep
 
-  #Create an image of the profile evolution calibrated in time
-  days = (dates[-1] - dates[0]).days
-  img = np.zeros((days,512))
-  for i,n in enumerate(img):
-    idx = np.abs(date_uniq - date_uniq[0] - datetime.timedelta(i)).argmin()
-    img[i] = obs_uniq[idx]
+  '''
+  #Average over dt
+  avg = []
+  avg_date = []
+  avg_num = []
+  date0 = date_list[0]
+  dt = 60
+  for idx,date in enumerate(date_list):
+    if date - date0 < datetime.timedelta(dt):
+      temp.append(observations[idx])
+    else:
+      if len(temp) > 5: avg.append(np.mean(temp,axis=0))
+      if len(temp) > 5: avg_date.append(date0+datetime.timedelta(dt/2))
+      if len(temp) > 5: avg_num.append(len(temp))
+      temp = []
+      date0 += datetime.timedelta(dt)
+  #avg.append(np.mean(temp,axis=0))
+  #avg_date.append(date0+datetime.timedelta(dt/2))
+  avg = np.array(avg)
+  avg_date = np.array(avg_date)
+  '''
 
-  img -= np.median(img, axis=1, keepdims=True)
-  #img /= np.max(img, axis=1, keepdims=True)
-  img /= np.sum(img, axis=1, keepdims=True)  #Set the total area constant
-  img = img[:,220:320]
-
-  date_min = matplotlib.dates.date2num(dates[0])
-  date_max = matplotlib.dates.date2num(dates[-1])
-  s = ax.imshow(np.clip(img,0,0.15*img.max()),cmap='Greys_r',origin="lower",aspect='auto',interpolation='nearest',extent=[0, img.shape[1]/512.*100, date_min, date_max])
-  ax.yaxis_date()
-  cbar = plt.colorbar(s)
-  cbar.ax.set_yticklabels(np.linspace(0,15,11,dtype=str))
-  cbar.set_label('Flux [% peak]')
-  ax.set_xlabel('Phase [%]')
+  base_y = np.min([date.toordinal() for date in dates])
+  scale_y = 0.001 / np.min(np.diff(np.unique(dates))).days
+  obs_max = 0
+  obs_min = 1
+  for idx,obs in enumerate(obs_uniq):
+    obs = obs[220:320]
+    x = np.arange(0,1,1./len(obs))
+    obs = np.clip(obs,0,0.3)
+    obs += scale_y * (float(dates[idx].toordinal()) - base_y)
+    obs_max = max(obs_max, max(obs))
+    obs_min = min(obs_min, min(obs))
+    ax.plot(x, obs, 'k')
+  #ax.set_ylim((-0.01,0.9))
+  ax.set_xlabel('Phase')
   ax.set_ylabel('Date')
-  #ax.yaxis.set_major_formatter(matplotlib.dates.DateFormatter('%d:%m:%y'))
-  #plt.savefig('test',bbox_inches='tight')
-  #plt.show()
+  #glitch_epoch = datetime.date(2011, 10, 25).toordinal()
+  fig = plt.gcf()
+  fig.canvas.draw()
+  ax.set_yticklabels([datetime.date.fromordinal(int((day/scale_y)+base_y)).strftime('%d-%m-%Y') for day in ax.get_yticks()])
+  ax.tick_params(axis='y', labelsize=6)
+
   return
   
 
-def load_obs_list(template=False):
+def load_obs_list(template=False, date_min=datetime.date.min):
   # Load numpy arrays containing LOFAR profiles
   date_list = []
   obs_list = []
@@ -65,8 +84,9 @@ def load_obs_list(template=False):
   archive_list.extend(glob(os.path.join(early_archives_folder,"*.pfd.bestprof")))
   for archive in archive_list:
     date, prof = load_archive(archive, template=template)
-    date_list.append(date)
-    obs_list.append(prof)
+    if date > date_min:
+      date_list.append(date)
+      obs_list.append(prof)
   date_list = np.array(date_list)
   obs_list = np.array(obs_list)
   idx = np.argsort(date_list)
@@ -105,5 +125,7 @@ def load_archive(archive,template=False):
 if __name__ == '__main__':
   plt.figure(figsize=(10,40))
   ax = plt.subplot()
-  plot_image(ax)
+  plot(ax, multiplot=False)
   plt.show()
+  #plt.savefig('LOFAR_profile_evolution.png',bbox_inches='tight')
+
