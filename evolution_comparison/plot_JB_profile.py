@@ -8,17 +8,13 @@ from glob import glob
 
 import mjd2date
 
-template_name = '/data1/Daniele/B2217+47/ephemeris/170202_JB_template_512.std'
-archives_folder = '/data1/Daniele/B2217+47/JB/512bins'
+data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
+
 
 def plot(ax, multiplot=True):
-  #Load template
-  template_load = psrchive.Archive_load(template_name)
-  template_load.remove_baseline()
-  template = template_load.get_data().flatten()
-
   #Load JB observations
-  dates, observations = load_obs_list(template=template)
+  dates = np.load(os.path.join(data_folder, 'JB_profiles_dates.npy'))
+  observations = np.load(os.path.join(data_folder, 'JB_profiles.npy'))
 
   #Average Observations on the same day
   date_uniq, idx_uniq, repeated = np.unique(dates, return_index=True, return_counts=True)
@@ -28,7 +24,8 @@ def plot(ax, multiplot=True):
     date_rep = np.where(dates == date_uniq[i])[0]
     obs_rep = np.sum(observations[date_rep], axis=0)
     obs_uniq[i] = obs_rep
-
+  obs_uniq /= obs_uniq.max(axis=1)[:, np.newaxis]
+  
   #Create an image of the profile evolution calibrated in time
   days = (dates[-1] - dates[0]).days
   img = np.zeros((days,512))
@@ -59,7 +56,13 @@ def plot(ax, multiplot=True):
   return
   
 
-def load_obs_list(template=False):
+def load_obs_list():
+  #Load template
+  template_name = '/data1/Daniele/B2217+47/ephemeris/170202_JB_template_512.std'
+  template_load = psrchive.Archive_load(template_name)
+  template_load.remove_baseline()
+  template = template_load.get_data().flatten()
+
   # Load numpy arrays containing profiles
   date_list = []
   obs_list = []

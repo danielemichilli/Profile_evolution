@@ -4,26 +4,16 @@ import os
 import datetime
 import matplotlib.dates
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 from glob import glob
 
 import mjd2date
 
-mpl.rc('font',size=30)
-
-template_name = '/data1/Daniele/B2217+47/ephemeris/160128_profile_template_512.std'
-archives_folder = '/data1/Daniele/B2217+47/Archives_updated'
-early_archives_folder = '/data1/Daniele/B2217+47/Archives_updated/early_obs'
+data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
 
 def plot(ax, multiplot=True, date_min=datetime.date.min):
-  #Load template
-  template_load = psrchive.Archive_load(template_name)
-  template_load.remove_baseline()
-  template = template_load.get_data().flatten()
-
   #Load LOFAR observations
-  dates, observations = load_obs_list(template=template, date_min=date_min)
-  print "Dates loaded: {} - {}".format(dates[0], dates[-1])
+  dates = np.load(os.path.join(data_folder, 'LOFAR_profiles_dates.npy'))
+  observations = np.load(os.path.join(data_folder, 'LOFAR_profiles.npy'))
 
   #Average Observations on the same day
   date_uniq, idx_uniq, repeated = np.unique(dates, return_index=True, return_counts=True)
@@ -65,7 +55,16 @@ def plot(ax, multiplot=True, date_min=datetime.date.min):
   return
   
 
-def load_obs_list(template=False, date_min=datetime.date.min):
+def load_obs_list(date_min=datetime.date.min):
+  template_name = '/data1/Daniele/B2217+47/ephemeris/160128_profile_template_512.std'
+  archives_folder = '/data1/Daniele/B2217+47/Archives_updated'
+  early_archives_folder = '/data1/Daniele/B2217+47/Archives_updated/early_obs'
+
+  #Load template
+  template_load = psrchive.Archive_load(template_name)
+  template_load.remove_baseline()
+  template = template_load.get_data().flatten()
+
   # Load numpy arrays containing LOFAR profiles
   date_list = []
   obs_list = []

@@ -9,14 +9,14 @@ from mjd2date import convert
 data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
 
 
-def plot(fig, plot_grid):
+def plot(fig, ratio=0.):
   res = np.load(os.path.join(data_folder, 'timing_res.npy'))
   vdot = np.load(os.path.join(data_folder, 'vdot.npy'))
   DM = np.load(os.path.join(data_folder, 'DM.npy'))
   DM_tel = np.load(os.path.join(data_folder, 'DM_tel.npy'))
   x_yr = [convert(n) for n in res[0]]
 
-  gs = gridspec.GridSpecFromSubplotSpec(3, 1, plot_grid, height_ratios=[2,1,2], hspace=.1)
+  gs = gridspec.GridSpec(3, 1, height_ratios=[1,.5,1], hspace=.1, left=0.6, right=.95, bottom=0.05, top=ratio-0.1)
   ax1 = plt.subplot(gs[0])
   ax2 = plt.subplot(gs[1])
   ax3 = plt.subplot(gs[2])
@@ -38,15 +38,17 @@ def plot(fig, plot_grid):
     idx = np.where(DM_tel == tel)[0]
     d = DM[:, idx]
     ax3.errorbar(d[0], d[1], yerr=d[2], fmt='o', c=colors[i], label=tel)
+  idx = np.argsort(DM[0])
+  ax3.plot(DM[0, idx], DM[1, idx], 'k-')
   ax3.set_xlabel('MJD')
   ax3.tick_params(axis='x', top='off')
-  ax3.legend(loc='center left')
+  ax3.legend(loc='center left', fancybox=True, framealpha=0.5)
   x_dm = np.array([res[0,0], res[0,-1]])
-  ax3.plot(x_dm, (x_dm - res[0,0]) / 365. * -2e-4 * np.sqrt(DM[1].mean()) + DM[1].max()+0.01, 'k--')
+  ax3.plot(x_dm, (x_dm - res[0,0]) / 365. * -2e-4 * np.sqrt(DM[1].mean()) + DM[1].max()+0.01, 'r-')
   ax3.set_ylabel('DM (pc$\cdot$cm$^{-3}$)')
   ax3.ticklabel_format(useOffset=False)
   ax3.axvline(55859.43, c='k', ls='--')
-  ax3.axvspan(56258, res[0,-1], fc='g', ec=None, alpha=.2)
+  #ax3.axvspan(56258, res[0,-1], fc='g', ec=None, alpha=.2)
 
   ax1.get_yaxis().set_label_coords(-0.08,0.5)
   ax2.get_yaxis().set_label_coords(-0.08,0.5)

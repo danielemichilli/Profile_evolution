@@ -8,19 +8,17 @@ from glob import glob
 
 import mjd2date
 
-template_name = '/data1/Daniele/B2217+47/ephemeris/160128_profile_template_512.std'
-archives_folder = '/data1/Daniele/B2217+47/Archives_updated'
-early_archives_folder = '/data1/Daniele/B2217+47/Archives_updated/early_obs'
+data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
 
 def plot(ax, multiplot=True, date_min=datetime.date(2013,01,01)):
-  #Load template
-  template_load = psrchive.Archive_load(template_name)
-  template_load.remove_baseline()
-  template = template_load.get_data().flatten()
-
   #Load LOFAR observations
-  dates, observations = load_obs_list(template=template, date_min=date_min)
+  dates = np.load(os.path.join(data_folder, 'LOFAR_profiles_dates.npy'))
+  observations = np.load(os.path.join(data_folder, 'LOFAR_profiles.npy'))
+  observations = observations[dates > date_min]
+  dates = dates[dates > date_min]
 
+
+  '''
   #Average Observations on the same day
   date_uniq, idx_uniq, repeated = np.unique(dates, return_index=True, return_counts=True)
   obs_uniq = observations[idx_uniq]
@@ -29,42 +27,73 @@ def plot(ax, multiplot=True, date_min=datetime.date(2013,01,01)):
     date_rep = np.where(dates == date_uniq[i])[0]
     obs_rep = np.sum(observations[date_rep], axis=0)
     obs_uniq[i] = obs_rep
+  obs_uniq /= obs_uniq.max(axis=1)[:, np.newaxis]
+  '''
 
   '''
   #Average over dt
   avg = []
   avg_date = []
   avg_num = []
-  date0 = date_list[0]
-  dt = 60
-  for idx,date in enumerate(date_list):
+  date0 = dates[0]
+  dt = 30
+  temp = []
+  for idx,date in enumerate(dates):
     if date - date0 < datetime.timedelta(dt):
       temp.append(observations[idx])
     else:
-      if len(temp) > 5: avg.append(np.mean(temp,axis=0))
-      if len(temp) > 5: avg_date.append(date0+datetime.timedelta(dt/2))
-      if len(temp) > 5: avg_num.append(len(temp))
+      avg.append(np.mean(temp,axis=0))
+      avg_date.append(date0+datetime.timedelta(dt/2))
+      avg_num.append(len(temp))
       temp = []
+      obs = observations[idx]
       date0 += datetime.timedelta(dt)
-  #avg.append(np.mean(temp,axis=0))
-  #avg_date.append(date0+datetime.timedelta(dt/2))
+  avg.append(np.mean(temp,axis=0))
+  avg_date.append(date0+datetime.timedelta(dt/2))
   avg = np.array(avg)
   avg_date = np.array(avg_date)
+  dates = avg_date
+  obs_uniq = avg / avg.max(axis=1)[:, np.newaxis]
   '''
 
+
+  dt = 30
+  delay = dates - dates[0]
+  delay = np.array( [n.days for n in delay] )  
+  delay /= dt
+  days = np.unique( delay )
+  avg = []
+  for n in days:
+    obs = observations[ np.where(delay==n)[0] ].sum(axis=0)
+    avg.append( obs / obs.max() )
+  obs_uniq = np.array(avg)
+
+  days = days * dt + dt / 2
+  distance = 0.0005
+  for i, obs in enumerate(obs_uniq):
+    y = obs[220:350] / distance + days[i]
+    x = (np.arange(y.size) - 258 + 220) / 512. * 538.4688219194
+    ax.plot(x, y, 'k')
+  ax.set_ylim([0., 0.05 / distance + days[i]])
+  
+
+
+  '''
+  #obs_uniq = observations
+
   base_y = np.min([date.toordinal() for date in dates])
-  scale_y = 0.001 / np.min(np.diff(np.unique(dates))).days
+  scale_y = 0.0001 / np.min(np.diff(np.unique(dates))).days
   obs_max = 0
   obs_min = 1
   for idx,obs in enumerate(obs_uniq):
-    obs = obs[220:320]
+    obs = obs[220:420]
     x = np.arange(0,1,1./len(obs))
-    obs = np.clip(obs,0,0.3)
+    obs = np.clip(obs,0,0.1)
     obs += scale_y * (float(dates[idx].toordinal()) - base_y)
     obs_max = max(obs_max, max(obs))
     obs_min = min(obs_min, min(obs))
     ax.plot(x, obs, 'k')
-  #ax.set_ylim((-0.01,0.9))
+  #ax.set_ylim((0, .3))
   ax.set_xlabel('Phase')
   ax.set_ylabel('Date')
   #glitch_epoch = datetime.date(2011, 10, 25).toordinal()
@@ -73,10 +102,21 @@ def plot(ax, multiplot=True, date_min=datetime.date(2013,01,01)):
   ax.set_yticklabels([datetime.date.fromordinal(int((day/scale_y)+base_y)).strftime('%d-%m-%Y') for day in ax.get_yticks()])
   ax.tick_params(axis='y', labelsize=6)
 
+  '''
+
+
   return
   
 
 def load_obs_list(template=False, date_min=datetime.date.min):
+  #Load template
+  template_name = '/data1/Daniele/B2217+47/ephemeris/160128_profile_template_512.std'
+  archives_folder = '/data1/Daniele/B2217+47/Archives_updated'
+  early_archives_folder = '/data1/Daniele/B2217+47/Archives_updated/early_obs'
+  template_load = psrchive.Archive_load(template_name)
+  template_load.remove_baseline()
+  template = template_load.get_data().flatten()
+
   # Load numpy arrays containing LOFAR profiles
   date_list = []
   obs_list = []
