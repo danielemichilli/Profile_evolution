@@ -12,32 +12,31 @@ data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
 ref_date = datetime.date(2010, 7, 25)
 ref_mjd = 55402
 
-def plot(fig):
-  gsA = gridspec.GridSpec(1, 2, wspace=.3, width_ratios=[0.02,1], left=0.05, right=0.495, bottom=0.05, top=.95)
-  ax_cb = plt.subplot(gsA[0])
+def plot(grid):
+  gs = gridspec.GridSpecFromSubplotSpec(1, 3, grid, wspace=.15, width_ratios=[.5,.5,1.])
+  ax1 = plt.subplot(gs[1])
+  ax2 = plt.subplot(gs[2], sharex=ax1, sharey=ax1)
+  ax3 = plt.subplot(gs[0], sharey=ax1)
 
-  gs = gridspec.GridSpecFromSubplotSpec(1, 3, gsA[1], wspace=.1, width_ratios=[1,1,.5])
-  ax1 = plt.subplot(gs[0])
-  ax2 = plt.subplot(gs[1], sharex=ax1, sharey=ax1)
-  ax3 = plt.subplot(gs[2], sharey=ax1)
-
-  JB(ax_cb, ax1)
-  days_max = LOFAR(ax2)
+  scale = JB(ax1)
+  LOFAR(ax2)
   flux(ax3)
 
   def label(ax, number):
     at = AnchoredText(number, prop=dict(size=15), loc=2, frameon=True, pad=.1, borderpad=0.)
     ax.add_artist(at)
     return
-  label(ax1, "(a)")
-  label(ax2, "(b)")
-  label(ax3, "(c)")
+  label(ax3, "(a)")
+  label(ax1, "(b)")
+  label(ax2, "(c)")
+
+  ax3.set_ylabel('Years after MJD 55402 (2010 July 25)')
+  ax3.tick_params(axis='y', labelleft='on')
+
+  return ax2, scale
 
 
-  return days_max, ax2
-
-
-def JB(ax1, ax2):
+def JB(ax):
   #Load JB observations
   dates = np.load(os.path.join(data_folder, 'JB_profiles_dates.npy'))
   observations = np.load(os.path.join(data_folder, 'JB_profiles.npy'))
@@ -66,17 +65,12 @@ def JB(ax1, ax2):
   date_max = (dates[-1] - ref_date).days
   phase_min = -353. / 512. * 538.4688219194
   phase_max = (512. - 353.) / 512. * 538.4688219194
-  s = ax2.imshow(np.clip(img,0,0.15*img.max()),cmap='hot',origin="lower",aspect='auto',interpolation='nearest',extent=[phase_min, phase_max, 0, date_max])
-  ax2.set_xlabel('Phase (ms)')
-  ax2.set_ylabel('Days after MJD 55402 (2010 July 25)')
-
-  cbar = plt.colorbar(s, cax=ax1)
-  cbar.ax.set_yticklabels(np.linspace(0,15,11,dtype=str))
-  cbar.ax.yaxis.set_label_position("left")
-  cbar.set_label('Flux [% peak]')
-  cbar.ax.tick_params(axis='y', labelleft='on', labelright='off', right='off', left='off')
-
-  return
+  s = ax.imshow(np.clip(img,0,0.15*img.max()),cmap='hot',origin="lower",aspect='auto',interpolation='nearest',extent=[phase_min, phase_max, 0, date_max/365.])
+  ax.set_xlabel('Phase\n(ms)')
+  ax.tick_params(axis='y', labelleft='off')
+  #ax.locator_params(axis='x', nticks=3)
+  ax.set_xticks(range(-30,91,30))
+  return s
 
 
 def LOFAR(ax):
@@ -107,26 +101,26 @@ def LOFAR(ax):
   date_max = (dates[-1] - ref_date).days
   phase_min = -258. / 512. * 538.4688219194
   phase_max = (512. - 258.) / 512. * 538.4688219194
-  s = ax.imshow(np.clip(img,0,0.15*img.max()),cmap='hot',origin="lower",aspect='auto',interpolation='nearest',extent=[phase_min, phase_max, 0, date_max])
+  s = ax.imshow(np.clip(img,0,0.15*img.max()),cmap='hot',origin="lower",aspect='auto',interpolation='nearest',extent=[phase_min, phase_max, 0, date_max/365.])
   ax.set_xlabel('Phase (ms)')
-  ax.tick_params(axis='y', labelleft='off', labelright='off')
+  ax.tick_params(axis='y', labelleft='off')
 
   ax.set_xlim([-30, 80])
-  ax.set_ylim([(dates[0] - ref_date).days, (dates[-1] - ref_date).days])
-  ax.yaxis.set_ticks(range(0, (dates[-1] - ref_date).days, 200))
-
-  return (dates[-1] - ref_date).days
+  ax.set_ylim([(dates[0] - ref_date).days/365., (dates[-1] - ref_date).days/365.])
+  #ax.yaxis.set_ticks(range(0, (dates[-1] - ref_date).days, 200))
+  ax.yaxis.set_ticks(np.arange(0, int((dates[-1] - ref_date).days/365.)+1, 0.5))
+  return 
 
 
 
 def flux(ax):
   JB_f = np.load(os.path.join(data_folder, 'JB_FLUX.npy'))
 
-  date = [(n - ref_date).days for n in JB_f[0]]
-  ax.errorbar(JB_f[1], date, xerr=JB_f[2], fmt='ko-')
-  ax.set_xlabel("Flux density (mJy)")
+  date = np.array([(n - ref_date).days for n in JB_f[0]])
+  ax.errorbar(JB_f[1], date/365., xerr=JB_f[2], fmt='ko-', markersize=2)
+  ax.set_xlabel("Flux density\n(mJy)")
   ax.tick_params(axis='y', labelleft='off')
-
+  ax.locator_params(axis='x', nbins=5)
   return
 
 
