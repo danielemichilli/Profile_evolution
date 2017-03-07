@@ -67,7 +67,7 @@ def pol_analysis(obs_folder=obs_folder):
   #prof = prof[:,1024*.8:1024*0.9]
 
 if __name__ == '__main__':
-  I,L,V,PA = pol_analysis()
+  date,I,L,V,PA = pol_analysis()
 
 '''
 #Usage in ipython

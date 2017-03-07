@@ -15,7 +15,7 @@ ratio = LOFAR_new.plot(fig, days_max=days_max, ax_ref=ax)
 long_term.plot(fig, ratio=ratio)
 
 
-#fig.savefig('test.png', papertype='a4', orientation='portrait', format='png')
+#fig.savefig('evolution.png', papertype='a4', orientation='portrait', format='png')
 
 
 plt.show()

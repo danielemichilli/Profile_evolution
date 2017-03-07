@@ -3,6 +3,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
 from mjd2date import convert
 
@@ -23,6 +24,15 @@ def plot(fig):
   JB(ax_cb, ax1)
   days_max = LOFAR(ax2)
   flux(ax3)
+
+  def label(ax, number):
+    at = AnchoredText(number, prop=dict(size=15), loc=2, frameon=True, pad=.1, borderpad=0.)
+    ax.add_artist(at)
+    return
+  label(ax1, "(a)")
+  label(ax2, "(b)")
+  label(ax3, "(c)")
+
 
   return days_max, ax2
 

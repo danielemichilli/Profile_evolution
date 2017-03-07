@@ -2,6 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
 from mjd2date import convert
 
@@ -42,7 +43,7 @@ def plot(fig, ratio=0.):
   ax3.plot(DM[0, idx], DM[1, idx], 'k-')
   ax3.set_xlabel('MJD')
   ax3.tick_params(axis='x', top='off')
-  ax3.legend(loc='center left', fancybox=True, framealpha=0.5)
+  ax3.legend(loc='lower left', fancybox=True)
   x_dm = np.array([res[0,0], res[0,-1]])
   ax3.plot(x_dm, (x_dm - res[0,0]) / 365. * -2e-4 * np.sqrt(DM[1].mean()) + DM[1].max()+0.01, 'r-')
   ax3.set_ylabel('DM (pc$\cdot$cm$^{-3}$)')
@@ -57,6 +58,14 @@ def plot(fig, ratio=0.):
   ax1.set_xlim([convert(res[0,0]), convert(res[0,-1])])
   ax2.set_xlim([res[0,0], res[0,-1]])
   ax3.set_xlim([res[0,0], res[0,-1]])
+
+  def label(ax, number):
+    at = AnchoredText(number, prop=dict(size=15), loc=2, frameon=True, pad=.1, borderpad=0.)
+    ax.add_artist(at)
+    return
+  label(ax1, "(g)")
+  label(ax2, "(h)")
+  label(ax3, "(i)")
 
   fig.add_subplot(ax1)
   fig.add_subplot(ax2)

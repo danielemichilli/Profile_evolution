@@ -3,6 +3,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
 from mjd2date import convert
 
@@ -23,6 +24,14 @@ def plot(fig, days_max=0., ax_ref=False):
   profiles(ax3, days_max)
   DM(ax2)
   flux(ax1)
+
+  def label(ax, number):
+    at = AnchoredText(number, prop=dict(size=15), loc=2, frameon=True, pad=.1, borderpad=0.)
+    ax.add_artist(at)
+    return
+  label(ax1, "(d)")
+  label(ax2, "(e)")
+  label(ax3, "(f)")
 
   return ratio
 
