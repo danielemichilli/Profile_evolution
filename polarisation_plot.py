@@ -6,28 +6,33 @@ import os
 import matplotlib.cm as cm
 import datetime 
 
-mpl.rc('font',size=5)
+mpl.rc('font',size=8)
 
 
 data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
+ref_date = datetime.date(2010, 7, 25)
 
 
 def main():
   fig = plt.figure(figsize=(7,4))
 
-  gs = gridspec.GridSpec(3, 4, width_ratios=[0.1,1,1,0.1], height_ratios=[0.5,1.,0.5], hspace=.3, wspace=.1)
+  gs = gridspec.GridSpec(3, 4, width_ratios=[0.1,1,1,0.1], height_ratios=[0.5,1.,0.5], hspace=.1, wspace=.6)
   ax_bar_l = plt.subplot(gs[:, 0])
   ax_bar_r = plt.subplot(gs[:, -1])
-  ax_top = plt.subplot(gs[2, 1])
-  ax_mid = plt.subplot(gs[1, 1], sharex=ax_top)
-  ax_bot = plt.subplot(gs[0, 1], sharex=ax_top)
+  ax_mid = plt.subplot(gs[1, 1])
+  ax_top = plt.subplot(gs[0, 1], sharex=ax_mid)
+  ax_bot = plt.subplot(gs[2, 1], sharex=ax_mid)
   #ax_right = plt.subplot(gs[:, 2])
 
   left_plot(ax_bar_l, ax_top, ax_mid, ax_bot)
-  right_plot(ax_bar_r, gs[:, 2])
+  right_plot(ax_bar_r, gs[:, 2], ax_ref=ax_top)
 
-  #fig.savefig('polarisation.png', papertype='a4', orientation='portrait', format='png')
-  plt.show()
+  ax_mid.set_xlim([(450.-517.)/1024.*538.4688219194, (632.-517.)/1024.*538.4688219194])
+ 
+  fig.savefig('polarisation.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+  #plt.show()
+
+  return
 
 
 
@@ -50,56 +55,73 @@ def left_plot(ax_bar, ax_top, ax_mid, ax_bot):
   x = np.linspace(-517./1024.*538.4688219194, (1024.-517.)/1024.*538.4688219194, 1024)
   for i in range(I.shape[0]):
     col = next(colors)
-    ax_mid.plot(x, I[i],color=col)
-    ax_mid.plot(x, L[i],color=col)  
-    ax_mid.plot(x, V[i],color=col)    
-  ax_mid.set_xlim([(450.-517.)/1024.*538.4688219194, (450.+145.-517.)/1024.*538.4688219194])
-  ax_mid.set_ylabel('Flux (rel.)')
+    ax_mid.plot(x, I[i]*100,color=col)
+    ax_mid.plot(x, L[i]*100,color=col)
+    ax_mid.plot(x, V[i]*100,color=col)    
+  ax_mid.set_ylabel('Flux (% peak)')
   ax_mid.tick_params(axis='x', labelbottom='off')
+  ax_mid.set_ylim([-3, 40])
 
   #PA
   start = 479.
   duration = 70.
-  PA_n = PA[:,start:start+duration]  #Select pahses based on pav output
+  PA_n = PA[:,int(start):int(start+duration)]  #Select pahses based on pav output
   x = (np.arange(duration) + start - 517.) / 1024. * 538.4688219194
 
   #Top plot
   colors = iter(cm.cool(c))
   for i,n in enumerate(PA_n):
     col = next(colors)
-    n -= n[duration/2]
+    n -= n[int(duration/2)]
     np.mod(n - 50 + 180, 180., out=n)
-    ax_top.plot(x, n, 'o',color=col,label=str(days[i]))
+    ax_top.plot(x, n, 'o',color=col,label=str(days[i]), markersize=1, markeredgewidth=0.)
   ax_top.set_ylabel('PA (deg)')
-  ax_top.axvline(45.5/1024.*538.4688219194,color='k',linestyle='dashed')
-  ax_top.axvline(56.5/1024.*538.4688219194,color='k',linestyle='dashed')
-  ax_mid.set_ylabel('P.A. (deg)')
-  ax_mid.tick_params(axis='x', labelbottom='off')
+  ax_top.axvline((45.5+479.-517.)/1024.*538.4688219194,color='k',linestyle='dashed')
+  ax_top.axvline((56.5+479.-517.)/1024.*538.4688219194,color='k',linestyle='dashed')
+  ax_top.set_ylabel('P.A. (deg)')
+  ax_top.tick_params(axis='x', labelbottom='off')
+  ax_mid.axvline((45.5+479.-517.)/1024.*538.4688219194,color='k',linestyle='dashed')
+  ax_mid.axvline((56.5+479.-517.)/1024.*538.4688219194,color='k',linestyle='dashed')
+  ax_top.locator_params(axis='y', nbins=5)
+  ax_top.set_ylim([0,180])
  
   #Relative flux of areas
-  In = I[1:,450:623]
-  Ln = L[1:,450:623]
-  In = np.array([ np.sum(In[:,25:42],axis=1), np.sum(In[:,42:74],axis=1), np.sum(In[:,74:90],axis=1), np.sum(In[:,90:],axis=1) ])
-  Ln = np.array([ np.sum(Ln[:,25:42],axis=1), np.sum(Ln[:,42:74],axis=1), np.sum(Ln[:,74:90],axis=1), np.sum(Ln[:,90:],axis=1) ])
+  components = [475, 492, 524, 540, 632]
+  In = np.array([ np.sum(I[:,components[0]:components[1]],axis=1), np.sum(I[:,components[1]:components[2]],axis=1), np.sum(I[:,components[2]:components[3]],axis=1), np.sum(I[:,components[3]:components[4]],axis=1) ])
+  Ln = np.array([ np.sum(L[:,components[0]:components[1]],axis=1), np.sum(L[:,components[1]:components[2]],axis=1), np.sum(L[:,components[2]:components[3]],axis=1), np.sum(L[:,components[3]:components[4]],axis=1) ])
   y = Ln / In
 
   #Bottom plot
   colors = iter(cm.cool(c))
-  x = (np.array([8,33,57,106]) + 450 - 517) / 1024. * 538.4688219194
+  x = (np.array([(475+492)/2., (492+524)/2., (524+540)/2., (540+632)/2.]) - 517) / 1024. * 538.4688219194
   for i,n in enumerate(y.T):
     col = next(colors)
-    ax_bot.plot(x, n, 'o', color=col, label=str(days[i]))
+    ax_bot.plot(x, n, 'o', color=col, label=str(days[i]), markersize=5, markeredgewidth=0.)
   ax_bot.set_ylabel('L/I')
-  ax_bot.set_xlabel('Phase (ms)')
-  ax_bot.axvline((17.+450.-517.)/1024.*538.4688219194,color='k',linestyle='dashed')
-  ax_bot.axvline((49.+450.-517.)/1024.*538.4688219194,color='k',linestyle='dashed')
-  ax_bot.axvline((65.+450.-517.)/1024.*538.4688219194,color='k',linestyle='dashed')
+  #for n in components:
+  #  ax_bot.axvline((n-517.)/1024.*538.4688219194,color='k',linestyle='dashed')
+  c = ['g', 'y']*3
+  for i in range(len(components)-1):
+    ax_bot.axvspan((components[i]-517.)/1024.*538.4688219194, (components[i+1]-517.)/1024.*538.4688219194, color=c[i], ls='-', ymin=.9)
+    ax_mid.axvspan((components[i]-517.)/1024.*538.4688219194, (components[i+1]-517.)/1024.*538.4688219194, color=c[i], ls='-', ymax=.05)
+  ax_bot.set_ylim([0.1,1.])
+  ax_bot.locator_params(axis='y', nbins=5)
+
+  #Color bar
+  norm = mpl.colors.Normalize(vmin=(date[0] - ref_date).days/365., vmax=(date[-1] - ref_date).days/365.)
+  cbar = mpl.colorbar.ColorbarBase(ax_bar, cmap='cool', norm=norm)
+  cbar.ax.yaxis.set_label_position("left")
+  cbar.set_label('Years after MJD 55402 (2010 July 25)')
+  cbar.ax.tick_params(axis='both', labelleft='on', labelright='off', right='off', left='off', bottom='off', top='off')
+  #cbar.outline.set_linewidth(0)
+  #cbar.ax.yaxis.set_ticks(np.arange(0, 1.01, .2))
+  #cbar.ax.set_yticklabels(range(0,16,3))#np.linspace(0,15,6,dtype=str))
 
   return
 
 
 
-def right_plot(ax_bar, gs):
+def right_plot(ax_bar, gs, ax_ref=False):
   #Load observations
   date = np.load(os.path.join(data_folder, 'pol_date.npy'))
   I, L, V, PA = np.load(os.path.join(data_folder, 'pol.npy'))
@@ -121,17 +143,29 @@ def right_plot(ax_bar, gs):
     imgL[i] = L[idx]
     imgV[i] = V[idx]
 
-  lim=0.03
-  plot_grid = gridspec.GridSpecFromSubplotSpec(3, 1, gs, wspace=0., hspace=0.)
-  ax1 = plt.subplot(plot_grid[0])
-  ax2 = plt.subplot(plot_grid[1])
-  ax3 = plt.subplot(plot_grid[2])
+  lim=0.04
+  plot_grid = gridspec.GridSpecFromSubplotSpec(3, 1, gs, hspace=.1)
+  ax1 = plt.subplot(plot_grid[0], sharex=ax_ref)
+  ax2 = plt.subplot(plot_grid[1], sharex=ax_ref, sharey=ax1)
+  ax3 = plt.subplot(plot_grid[2], sharex=ax_ref, sharey=ax1)
 
-  ax1.imshow(np.clip(imgI[:,450:650],0.,lim),cmap='hot',origin="lower",aspect='auto',interpolation='nearest')
-  ax2.imshow(np.clip(imgL[:,450:650],0.,lim),cmap='hot',origin="lower",aspect='auto',interpolation='nearest')
-  ax3.imshow(np.clip(imgV[:,450:650],0.,lim),cmap='hot',origin="lower",aspect='auto',interpolation='nearest')
- 
- 
+  extent = [(450.-517.)/1024.*538.4688219194, (650.-517.)/1024.*538.4688219194, (date[0] - ref_date).days/365., (date[-1] - ref_date).days/365.]
+  ax1.imshow(np.clip(imgI[:,450:650],0.,lim),cmap='hot',origin="lower",aspect='auto',interpolation='nearest', extent=extent)
+  ax2.imshow(np.clip(imgL[:,450:650],0.,lim),cmap='hot',origin="lower",aspect='auto',interpolation='nearest', extent=extent)
+  ax3.imshow(np.clip(imgV[:,450:650],0.,lim),cmap='hot',origin="lower",aspect='auto',interpolation='nearest', extent=extent)
+
+  ax2.set_ylabel("Years after MJD 55402 (2010 July 25)")
+  ax3.set_xlabel("Phase (ms)") 
+  ax1.tick_params(axis='x', labelbottom='off')
+  ax2.tick_params(axis='x', labelbottom='off')
+
+  #Color bar
+  norm = mpl.colors.Normalize(vmin=0., vmax=lim*100)
+  cbar = mpl.colorbar.ColorbarBase(ax_bar, cmap='hot', norm=norm)
+  cbar.ax.yaxis.set_label_position("left")
+  cbar.set_label('Flux (% peak)')
+  cbar.ax.tick_params(axis='both', labelleft='on', labelright='off', right='off', left='off', bottom='off', top='off')
+
   return
 
 if __name__ == '__main__':

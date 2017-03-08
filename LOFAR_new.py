@@ -102,7 +102,7 @@ def flux(ax):
   ax.errorbar(LOFAR_f[1,idx]/1000., date[idx]/365., xerr=LOFAR_f[1,idx]/2./1000., fmt='ko-', markersize=2)
   ax.set_xlabel("Flux density\n(Jy)")
   ax.tick_params(axis='y', labelleft='off')
-  ax.locator_params(axis='x', nbins=4)
+  ax.locator_params(axis='x', nbins=3)
   ax.set_xlim([0,2])
   return
 
