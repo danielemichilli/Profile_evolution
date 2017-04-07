@@ -9,10 +9,12 @@ import LOFAR_new
 import long_term
 
 mpl.rc('font',size=8)
+#mpl.rc('text',usetex=True)
+#mpl.rc('font',**{'family':'serif','serif':['Computer Modern']})
 
-fig = plt.figure(figsize=(7,8.5))
+fig = plt.figure(figsize=(7,8))
 
-gs = gridspec.GridSpec(3, 2, height_ratios=[1.-1000./2387., 0.1, 1000./2387.-.1], wspace=0.04, hspace=0.)
+gs = gridspec.GridSpec(3, 2, height_ratios=[1.-1000./2387., 0.1, 1000./2387.-.1], wspace=0.06, hspace=0.)
 
 ax, scale = LOFAR_span_all.plot(gs[:, 0])
 LOFAR_new.plot(gs[0, 1], ax_ref=ax)
@@ -27,7 +29,7 @@ cbar.ax.tick_params(axis='y', labelleft='off', labelright='on', right='off', lef
 cbar.ax.yaxis.set_ticks(np.arange(0, 1.01, .2))
 cbar.ax.set_yticklabels(range(0,16,3))#np.linspace(0,15,6,dtype=str))
 
-#fig.savefig('evolution.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+fig.savefig('evolution.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
 
 
 plt.show()

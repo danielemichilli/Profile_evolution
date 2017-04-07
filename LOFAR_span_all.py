@@ -30,6 +30,10 @@ def plot(grid):
   label(ax1, "(b)")
   label(ax2, "(c)")
 
+  ax1.set_title('Lovell')
+  ax2.set_title('LOFAR')
+  ax3.set_title('Lovell')
+
   ax3.set_ylabel('Years after MJD 55402 (2010 July 25)')
   ax3.tick_params(axis='y', labelleft='on')
 
@@ -104,6 +108,8 @@ def LOFAR(ax):
   s = ax.imshow(np.clip(img,0,0.15*img.max()),cmap='hot',origin="lower",aspect='auto',interpolation='nearest',extent=[phase_min, phase_max, 0, date_max/365.])
   ax.set_xlabel('Phase (ms)')
   ax.tick_params(axis='y', labelleft='off')
+
+  ax.axhline((55859-ref_mjd)/365., c='m')
 
   ax.set_xlim([-30, 80])
   ax.set_ylim([(dates[0] - ref_date).days/365., (dates[-1] - ref_date).days/365.])

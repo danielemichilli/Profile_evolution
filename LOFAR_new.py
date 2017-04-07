@@ -32,6 +32,10 @@ def plot(grid, ax_ref=False):
   label(ax2, "(e)")
   label(ax1, "(f)")
 
+  ax1.set_title('LOFAR')
+  ax2.set_title('LOFAR')
+  ax3.set_title('LOFAR')
+
   ax1.tick_params(axis='y', labelright='on')
   ax1.yaxis.set_label_position("right")
   ax1.set_ylabel('Years after MJD 55402 (2010 July 25)')
@@ -69,7 +73,7 @@ def profiles(ax):
   ax.set_ylim([days_min/365., (dates[-1] - ref_date).days/365.])
   #ax.set_ylim([days_min, 0.05 / distance + days[i]])
   ax.set_xlabel('Phase (ms)')
-  ax.set_xlim([-30, 80])
+  ax.set_xlim([-30, 60])
   ax.tick_params(axis='y', labelleft='off')
   #ax.yaxis.set_ticks(np.arange(int(days_min/365.), int((dates[-1] - ref_date).days/365.)+1, 0.5))
   return
@@ -86,7 +90,7 @@ def DM(ax):
   #ax.errorbar((d[1,idx]-43.485)*1000, (d[0,idx] - ref_mjd)/365., xerr=d[2,idx], fmt='ko', markersize=2)
   ax.plot((d[1,idx]-43.485)*1000, (d[0,idx] - ref_mjd)/365., 'ko', markersize=2)
   ax.tick_params(axis='y', labelleft='off')
-  ax.set_xlabel('DM-43485\n(mpc$\cdot$cm$^{-3}$)')
+  ax.set_xlabel('DM - 43.485\n(mpc cm$^{-3}$)')
   ax.ticklabel_format(useOffset=False)
   ax.locator_params(axis='x', nbins=5)
 
