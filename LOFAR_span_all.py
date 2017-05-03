@@ -73,6 +73,7 @@ def JB(ax):
   ax.set_xlabel('Phase\n(ms)')
   ax.tick_params(axis='y', labelleft='off')
   #ax.locator_params(axis='x', nticks=3)
+  #ax.set_xticks(range(-20,61,20))
   ax.set_xticks(range(-30,91,30))
   return s
 

@@ -65,9 +65,9 @@ def left_plot(ax_bar, ax_top, ax_mid, ax_bot):
   x = np.linspace(-517./1024.*538.4688219194, (1024.-517.)/1024.*538.4688219194, 1024)
   for i in range(I.shape[0]):
     col = next(colors)
-    ax_mid.plot(x, I[i]*100,color=col)
-    ax_mid.plot(x, L[i]*100,color=col)
-    ax_mid.plot(x, V[i]*100,color=col)    
+    ax_mid.plot(x, I[i]*100, color=col)
+    ax_mid.plot(x, L[i]*100, color=col, linestyle='--')
+    ax_mid.plot(x, V[i]*100, color=col, linestyle=':')
   ax_mid.set_ylabel('Flux (% peak)')
   ax_mid.tick_params(axis='x', labelbottom='off')
   ax_mid.set_ylim([-3, 40])

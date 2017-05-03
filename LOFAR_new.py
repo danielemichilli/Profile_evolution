@@ -90,7 +90,7 @@ def DM(ax):
   #ax.errorbar((d[1,idx]-43.485)*1000, (d[0,idx] - ref_mjd)/365., xerr=d[2,idx], fmt='ko', markersize=2)
   ax.plot((d[1,idx]-43.485)*1000, (d[0,idx] - ref_mjd)/365., 'ko', markersize=2)
   ax.tick_params(axis='y', labelleft='off')
-  ax.set_xlabel('DM - 43.485\n(mpc cm$^{-3}$)')
+  ax.set_xlabel('DM - 43485\n(mpc cm$^{-3}$)')
   ax.ticklabel_format(useOffset=False)
   ax.locator_params(axis='x', nbins=5)
 
