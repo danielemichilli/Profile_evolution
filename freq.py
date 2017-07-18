@@ -4,7 +4,9 @@ import numpy as np
 import sys
 import os
 from scipy.optimize import curve_fit
+import matplotlib as mpl
 
+mpl.rc('font',size=8)
 data_folder = '/data1/Daniele/B2217+47/Archives_updated'
 
 
@@ -56,6 +58,51 @@ def calculate_alpha(ar_name, params):
   err_alpha_tot = np.sqrt( (err_alpha * alpha)**2 + (1.98 * 0.09)**2 )
 
   return alpha_tot, err_alpha_tot
+
+
+def sp_variab():
+  fig = plt.figure(figsize=(3.3,3.3))
+  ar_name = '/data1/Daniele/B2217+47/Analysis/sp/L32532_sp.F'
+  load_archive = psrchive.Archive_load(ar_name)
+  load_archive.remove_baseline()
+  prof = load_archive.get_data().squeeze()
+  w = load_archive.get_weights()
+  prof *= w
+  prof = prof[:prof.shape[0]-120]
+  params = [0,800,887,925,951]
+
+  prof -= np.mean(prof[:, params[0] : params[1]])
+  prof /= np.std(prof[:, params[0] : params[1]])
+  err_bin = np.std(prof[:, params[0] : params[1]], axis=1)
+
+  mp = prof[:, params[2] : params[3]].sum(axis=1)
+  pc = prof[:, params[3] : params[4]].sum(axis=1)
+  err_mp = err_bin * np.sqrt(params[3]-params[2])
+  err_pc = err_bin * np.sqrt(params[4]-params[3])
+
+  err_mp /= mp.max()
+  err_pc /= mp.max()
+  pc = pc/mp.max()
+  mp = mp/mp.max()
+
+  idx = np.argsort(mp)
+  mp = mp[idx]
+  pc = pc[idx]
+  err_mp = err_mp[idx]
+  err_pc = err_pc[idx]
+
+  plt.errorbar(mp,pc,fmt='ko',xerr=err_mp,yerr=err_pc, ms=1., lw=.5)
+  #plt.plot(mp,np.poly1d(np.polyfit(mp, pc, 2))(mp),'r-')
+  plt.plot([0,1],np.poly1d(np.polyfit(mp, pc, 1))([0,1]),'r-')
+
+  plt.xlim([0,1])
+  plt.ylim([-0.015,0.14])
+  plt.xlabel('Main peak flux density (norm.)')
+  plt.ylabel('Transient component flux density (norm.)')
+
+  fig.tight_layout()
+  fig.savefig('single_pulses.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+  plt.show()
 
 
 def DM_var():
@@ -113,7 +160,9 @@ bad_obs = ['B2217+47_L352456_SAP0_BEAM0.dm.paz.clean.pT','B2217+47_L261995_SAP0_
 
 
 if __name__ == '__main__':
-  
+  sp_variab()
+
+  '''  
   #ar_name = sys.argv[1]
   #if ar_name in bad_obs:
   #  print "This observation does not have enough quality. Exiting..."
@@ -122,7 +171,7 @@ if __name__ == '__main__':
   for ar_name in ar_parameters.iterkeys():
     a, a_err = calculate_alpha(ar_name, ar_parameters[ar_name])
     print ar_name, " :", a, a_err
-
+  '''
   '''
   else:
     print "Obs. not known, please specify parameters"

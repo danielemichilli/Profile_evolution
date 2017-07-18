@@ -56,7 +56,7 @@ def plot(fig):
   DM_tel = np.load(os.path.join(data_folder, 'DM_tel.npy'))
   x_yr = [convert(n) for n in res[0]]
 
-  gs = gridspec.GridSpec(3, 1, height_ratios=[1,.5,1], hspace=.1)
+  gs = gridspec.GridSpec(3, 1, height_ratios=[1,.5,1], hspace=.2)
   ax1 = plt.subplot(gs[0])
   ax2 = plt.subplot(gs[1])
   ax3 = plt.subplot(gs[2])
@@ -117,9 +117,20 @@ def plot(fig):
   ax1.set_xlim([convert(res[0,0]), convert(res[0,-1])])
   ax2.set_xlim([res[0,0], res[0,-1]])
   ax3.set_xlim([res[0,0], res[0,-1]])
+  ax1.set_ylim([-30,20])
+  ax2.set_ylim([-9.541,-9.533])
+  ax3.set_ylim([43.475,43.545])
+
+  ax1b.locator_params(axis='y', nbins=6)
+  ax1b.set_yticks(range(-6,6,2))
+
+  ax2.locator_params(axis='y', nbins=4)
+  ax3.locator_params(axis='y', nbins=6)
+  ax2.set_yticks([-9.540, -9.537, -9.534])
 
   def label(ax, number):
     at = AnchoredText(number, prop=dict(size=15), loc=2, frameon=True, pad=.1, borderpad=0.)
+    at.zorder = 10
     ax.add_artist(at)
     return
   label(ax1, "(a)")

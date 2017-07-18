@@ -22,7 +22,7 @@ plt.ylim((0,1.5))
 plt.xlim((3,200))
 
 plt.xlabel("DM (pc cm$^{-3}$)")
-plt.ylabel("Flux (Jy)")
+plt.ylabel("Flux density (Jy)")
 
 
 fig.tight_layout()
