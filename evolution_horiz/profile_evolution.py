@@ -6,7 +6,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import LOFAR_span_all
 import LOFAR_new
-import long_term
 
 mpl.rc('font',size=8)
 #mpl.rc('text',usetex=True)
@@ -32,7 +31,7 @@ cbar.ax.tick_params(axis='y', labelleft='off', labelright='on', right='off', lef
 cbar.ax.yaxis.set_ticks(np.arange(0, 1.01, .2))
 cbar.ax.set_yticklabels(range(0,16,3))#np.linspace(0,15,6,dtype=str))
 
-fig.savefig('evolution.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+fig.savefig('evolution.eps', papertype='a4', orientation='portrait', format='eps', dpi=200, bbox='tight')
 
 
 plt.show()

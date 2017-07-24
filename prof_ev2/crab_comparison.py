@@ -11,8 +11,8 @@ from mjd2date import year
 mpl.rc('font',size=8)
 
 data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
-ref_date = datetime.date(2010, 7, 25)
-
+#ref_date = datetime.date(2010, 7, 25)
+ref_date = datetime.date(2011, 3, 13)
 
 def main():
   fig = plt.figure(figsize=(3.3,4))
@@ -54,6 +54,8 @@ def LOFAR(ax):
   #Load LOFAR observations
   dates = np.load(os.path.join(data_folder, 'LOFAR_profiles_dates.npy'))
   observations = np.load(os.path.join(data_folder, 'LOFAR_profiles.npy'))
+  observations = observations[dates >= ref_date]
+  dates = dates[dates >= ref_date]
 
   #Average Observations on the same day
   date_uniq, idx_uniq, repeated = np.unique(dates, return_index=True, return_counts=True)

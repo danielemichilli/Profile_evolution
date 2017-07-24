@@ -103,7 +103,7 @@ def DM(ax):
   d = DM[:, idx]
   idx = np.argsort(d[0])
   date = [year(convert(n)) for n in d[0,idx]]
-  ax.errorbar((d[1,idx]-43.485)*1000, date, xerr=d[2,idx]*1000/2., fmt='ko', markersize=2, capsize=0)
+  ax.errorbar((d[1,idx]-43.485)*1000, date, xerr=d[2,idx]*1000, fmt='ko', markersize=2, capsize=0)
   #ax.plot((d[1,idx]-43.485)*1000, (d[0,idx] - ref_mjd)/365., 'ko', markersize=2)
   ax.tick_params(axis='y', labelleft='off')
   ax.set_xlabel('DM - 43.485\n(10$^{-3}$pc cm$^{-3}$)')
@@ -118,7 +118,7 @@ def flux(ax):
 
   date = np.array([year(n) for n in LOFAR_f[0]])
   idx = np.argsort(date)
-  ax.errorbar(LOFAR_f[1,idx]/1000., date[idx], xerr=LOFAR_f[1,idx]/2./1000./2., fmt='ko-', markersize=2, capsize=0)
+  ax.errorbar(LOFAR_f[1,idx]/1000., date[idx], xerr=LOFAR_f[1,idx]/2./1000., fmt='ko-', markersize=2, capsize=0)
   ax.set_xlabel("Flux density\n(Jy)")
   ax.tick_params(axis='y', labelleft='off')
   ax.locator_params(axis='x', nbins=3)

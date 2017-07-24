@@ -140,7 +140,7 @@ def flux(ax):
   JB_f = np.load(os.path.join(data_folder, 'JB_FLUX.npy'))
 
   date = [year(n) for n in JB_f[0]]
-  ax.errorbar(JB_f[1], date, xerr=JB_f[2]/2., fmt='ko-', markersize=2, capsize=0)
+  ax.errorbar(JB_f[1], date, xerr=JB_f[2], fmt='ko-', markersize=2, capsize=0)
   ax.set_xlabel("Flux density\n(mJy)")
   ax.tick_params(axis='y', labelleft='off')
   ax.locator_params(axis='x', nbins=5)

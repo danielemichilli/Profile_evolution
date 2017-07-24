@@ -8,21 +8,23 @@ from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 from mjd2date import convert
 from mjd2date import year
-
+from LOFAR_new import profiles
 
 data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
-ref_date = datetime.date(2010, 7, 25)
-ref_mjd = 55402
+ref_date = datetime.date(2011, 3, 13)
+#ref_date = datetime.date(2010, 7, 25)
 
 def plot(grid):
-  gs = gridspec.GridSpecFromSubplotSpec(1, 3, grid, wspace=.15, width_ratios=[.5,.5,1.])
+  gs = gridspec.GridSpecFromSubplotSpec(1, 4, grid, wspace=.15, width_ratios=[.5,.5,1.,1.])
   ax1 = plt.subplot(gs[1])
   ax2 = plt.subplot(gs[2], sharex=ax1, sharey=ax1)
   ax3 = plt.subplot(gs[0], sharey=ax1)
+  ax4 = plt.subplot(gs[3], sharex=ax1, sharey=ax1)
 
   scale = JB(ax1)
   LOFAR(ax2)
   flux(ax3)
+  profiles(ax4)
 
   def label(ax, number):
     at = AnchoredText(number, prop=dict(size=15), loc=2, frameon=True, pad=.1, borderpad=0.)
@@ -31,10 +33,15 @@ def plot(grid):
   label(ax3, "(a)")
   label(ax1, "(b)")
   label(ax2, "(c)")
+  label(ax4, "(d)")
 
   ax1.set_title('Lovell')
   ax2.set_title('LOFAR')
   ax3.set_title('Lovell')
+  ax4.set_title('LOFAR')
+  ax4.ticklabel_format(useOffset=False)
+  ax4.yaxis.set_major_locator(MultipleLocator(1))
+  ax4.yaxis.set_minor_locator(MultipleLocator(.2))
 
   #ax3.set_ylabel('Years after MJD 55402 (2010 July 25)')
   ax3.set_ylabel('Year')
@@ -97,7 +104,9 @@ def LOFAR(ax):
   #Load LOFAR observations
   dates = np.load(os.path.join(data_folder, 'LOFAR_profiles_dates.npy'))
   observations = np.load(os.path.join(data_folder, 'LOFAR_profiles.npy'))
-  
+  observations = observations[dates >= ref_date]
+  dates = dates[dates >= ref_date]
+ 
   #Average Observations on the same day
   date_uniq, idx_uniq, repeated = np.unique(dates, return_index=True, return_counts=True)
   obs_uniq = observations[idx_uniq]

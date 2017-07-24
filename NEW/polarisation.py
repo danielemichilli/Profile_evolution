@@ -198,7 +198,7 @@ def right_plot(ax_bar, ax1, ax2, ax3):
   ax3.ticklabel_format(useOffset=False)
 
   def label(ax, number):
-    at = AnchoredText(number, prop=dict(size=15), loc=2, frameon=True, pad=.1, borderpad=0.)
+    at = AnchoredText(number, prop=dict(size=15), loc=1, frameon=True, pad=.1, borderpad=0.)
     ax.add_artist(at)
     return
   label(ax1, "(d)")

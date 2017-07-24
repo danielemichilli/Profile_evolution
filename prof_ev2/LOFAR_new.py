@@ -11,18 +11,18 @@ from mjd2date import year
 
 
 data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
-ref_date = datetime.date(2010, 7, 25)
-ref_mjd = 55402
+ref_date = datetime.date(2011, 3, 13)
+ref_mjd = 55633
+#ref_date = datetime.date(2010, 7, 25)
+#ref_mjd = 55402
 
 days_min = 1000.
 
 def plot(grid, ax_ref=False):
-  gs = gridspec.GridSpecFromSubplotSpec(1, 3, grid, wspace=.15, width_ratios=[1.,.5,.5])
-  ax1 = plt.subplot(gs[2])
-  ax2 = plt.subplot(gs[1], sharey=ax1)
-  ax3 = plt.subplot(gs[0], sharey=ax1, sharex=ax_ref)
+  gs = gridspec.GridSpecFromSubplotSpec(1, 2, grid, wspace=.15)
+  ax1 = plt.subplot(gs[1])
+  ax2 = plt.subplot(gs[0], sharey=ax1)
 
-  profiles(ax3)
   DM(ax2)
   flux(ax1)
 
@@ -30,13 +30,11 @@ def plot(grid, ax_ref=False):
     at = AnchoredText(number, prop=dict(size=15), loc=2, frameon=True, pad=.1, borderpad=0.)
     ax.add_artist(at)
     return
-  label(ax3, "(d)")
   label(ax2, "(e)")
   label(ax1, "(f)")
 
   ax1.set_title('LOFAR')
   ax2.set_title('LOFAR')
-  ax3.set_title('LOFAR')
 
   ax1.tick_params(axis='y', labelright='on')
   ax1.yaxis.set_label_position("right")
@@ -46,14 +44,11 @@ def plot(grid, ax_ref=False):
 
   ax1.ticklabel_format(useOffset=False)
   ax2.ticklabel_format(useOffset=False)
-  ax3.ticklabel_format(useOffset=False)
 
   ax1.yaxis.set_major_locator(MultipleLocator(1))
   ax1.yaxis.set_minor_locator(MultipleLocator(.2))
   ax2.yaxis.set_major_locator(MultipleLocator(1))
   ax2.yaxis.set_minor_locator(MultipleLocator(.2))
-  ax3.yaxis.set_major_locator(MultipleLocator(1))
-  ax3.yaxis.set_minor_locator(MultipleLocator(.2))
 
   return
 
@@ -63,8 +58,8 @@ def profiles(ax):
   #Load LOFAR observations
   dates = np.load(os.path.join(data_folder, 'LOFAR_profiles_dates.npy'))
   observations = np.load(os.path.join(data_folder, 'LOFAR_profiles.npy'))
-  observations = observations[dates > ref_date]
-  dates = dates[dates > ref_date]
+  observations = observations[dates >= ref_date]
+  dates = dates[dates >= ref_date]
 
   #Average over dt
   dt = 30

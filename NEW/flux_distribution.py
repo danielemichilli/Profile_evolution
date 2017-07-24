@@ -13,8 +13,8 @@ B2217_pos = [43.4862, 820.]
 
 fig = plt.figure(figsize=(3.3,2))
 
-plt.errorbar(val[0], val[2]/1000., yerr=val[3]/2000., fmt='ok', ms=1, lw=.5)
-plt.annotate('B2217+47', xy=(B2217_pos[0], B2217_pos[1]/1000.), xytext=(B2217_pos[0]+2, B2217_pos[1]/1000.+0.01), horizontalalignment='left', verticalalignment='centre')
+plt.errorbar(val[0], val[2]/1000., yerr=val[3]/1000., fmt='ok', ms=1, lw=.5)
+plt.annotate('B2217+47', xy=(B2217_pos[0], B2217_pos[1]/1000.), xytext=(B2217_pos[0]+2, B2217_pos[1]/1000.-.3), horizontalalignment='left', verticalalignment='centre')
 plt.plot(val[0,144], val[2,144]/1000., 'or', markeredgewidth=0., ms=2)
 
 plt.xscale('log')
@@ -30,6 +30,6 @@ fig.tight_layout()
 fig.savefig('flux_distribution.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
 
 
-#plt.show()
+plt.show()
 
 

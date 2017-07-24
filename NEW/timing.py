@@ -4,6 +4,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+from matplotlib.ticker import MultipleLocator
+from matplotlib.dates import YearLocator
 import datetime
 
 from mjd2date import convert
@@ -66,11 +68,11 @@ def plot(fig):
   ax1.set_xlabel('Year')
   ax1.xaxis.set_label_position('top') 
   ax1.tick_params(axis='x', labelbottom='off', labeltop='on', bottom='off')
-  ax1.minorticks_on()
+  #ax1.minorticks_on()
   ax1.tick_params(axis='both', which='minor', top='on', bottom='off', left='off', right='off')
   ax1.axvline(convert(55859.43), c='k', ls='--')
-  ax1.axvspan(convert(55402), convert(56258), fc='r', ec=None, alpha=.2, linewidth=0.)
-  ax1.axvspan(convert(56258), convert(res[0,-1]), fc='g', ec=None, alpha=.2, linewidth=0.)
+  ax1.axvspan(convert(55402), convert(56258), fc='lightcoral', ec=None, linewidth=0.)
+  ax1.axvspan(convert(56258), convert(res[0,-1]), fc='palegreen', ec=None, linewidth=0.)
   pos = ax1.get_position()
   x_in = (55402.-res[0,0]) / (res[0,-1]-res[0,0]) * (pos.xmax - pos.xmin) + pos.xmin
   y_in = (pos.ymax - pos.ymin) * 0.4
@@ -86,8 +88,8 @@ def plot(fig):
   ax2.set_ylabel(r'$\dot{\nu}\ \times\ 10^{-15}$ Hz/s')
   ax2.tick_params(axis='x', labelbottom='off', labeltop='off', bottom='off', top='off')
   ax2.axvline(55859.43, c='k', ls='--')
-  ax2.axvspan(55402, 56258, fc='r', ec=None, alpha=.2, linewidth=0.)
-  ax2.axvspan(56258, res[0,-1], fc='g', ec=None, alpha=.2, linewidth=0.)
+  ax2.axvspan(55402, 56258, fc='lightcoral', ec=None, linewidth=0.)
+  ax2.axvspan(56258, res[0,-1], fc='palegreen', ec=None, linewidth=0.)
   ax2.ticklabel_format(useOffset=False)
   ax2.set_yticks(np.linspace(-9.541,-9.533,5))
 
@@ -102,13 +104,11 @@ def plot(fig):
     ax3.errorbar(d[0], d[1], yerr=d[2]/2., fmt='o', c=colors[i], label=tel, markeredgewidth=0., markersize=3, capsize=0, zorder=3)
   ax3.set_xlabel('MJD')
   ax3.tick_params(axis='x', top='off')
-  ax3.minorticks_on()
+  #ax3.minorticks_on()
   ax3.tick_params(axis='both', which='minor', bottom='on', top='off', left='off', right='off')
   ax3.legend(loc='lower left', fancybox=True, numpoints=1)
   ax3.set_ylabel('DM (pc cm$^{-3}$)')
   ax3.ticklabel_format(useOffset=False)
-  #ax3.axvline(55859.43, c='k', ls='--')
-  #ax3.axvspan(56258, res[0,-1], fc='g', ec=None, alpha=.2)
   
   ax1.get_yaxis().set_label_coords(-0.09,0.5)
   ax2.get_yaxis().set_label_coords(-0.09,0.5)
@@ -127,6 +127,14 @@ def plot(fig):
   ax2.locator_params(axis='y', nbins=4)
   ax3.locator_params(axis='y', nbins=6)
   ax2.set_yticks([-9.540, -9.537, -9.534])
+
+  ax1.xaxis.set_major_locator(YearLocator(5))
+  ax1.xaxis.set_minor_locator(YearLocator(1))
+  ax3.xaxis.set_major_locator(MultipleLocator(2000))
+  ax3.xaxis.set_minor_locator(MultipleLocator(2000/5))
+  ax1.tick_params(axis='both', which='both', direction='inout')
+  ax2.tick_params(axis='both', which='both', direction='inout')
+  ax3.tick_params(axis='both', which='both', direction='inout')
 
   def label(ax, number):
     at = AnchoredText(number, prop=dict(size=15), loc=2, frameon=True, pad=.1, borderpad=0.)

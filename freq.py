@@ -85,20 +85,22 @@ def sp_variab():
   pc = pc/mp.max()
   mp = mp/mp.max()
 
-  idx = np.argsort(mp)
-  mp = mp[idx]
-  pc = pc[idx]
-  err_mp = err_mp[idx]
-  err_pc = err_pc[idx]
+  #mp = np.roll(mp,1)
 
-  plt.errorbar(mp,pc,fmt='ko',xerr=err_mp,yerr=err_pc, ms=1., lw=.5)
+  #idx = np.argsort(mp)
+  #mp = mp[idx]
+  #pc = pc[idx]
+  #err_mp = err_mp[idx]
+  #err_pc = err_pc[idx]
+
+  plt.errorbar(mp,pc,fmt='ko',xerr=err_mp/2.,yerr=err_pc/2., ms=1., lw=.5)
   #plt.plot(mp,np.poly1d(np.polyfit(mp, pc, 2))(mp),'r-')
   plt.plot([0,1],np.poly1d(np.polyfit(mp, pc, 1))([0,1]),'r-')
 
   plt.xlim([0,1])
   plt.ylim([-0.015,0.14])
-  plt.xlabel('Main peak flux density (norm.)')
-  plt.ylabel('Transient component flux density (norm.)')
+  plt.xlabel('Main peak flux density (rel.)')
+  plt.ylabel('Transient component flux density (rel.)')
 
   fig.tight_layout()
   fig.savefig('single_pulses.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
