@@ -7,12 +7,15 @@ from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 from matplotlib.ticker import MultipleLocator
 from matplotlib.dates import YearLocator
 import datetime
-
+from matplotlib import rcParams
+rcParams['ps.fonttype'] = 42
+from matplotlib.backends.backend_pdf import PdfPages
 from mjd2date import convert
+import LOFAR_profiles
 
 mpl.rc('font',size=8)
-ref_date = datetime.date(2010, 7, 25)
 ref_mjd = 55402
+ref_date = datetime.date(2011, 1, 1)
 data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
 
 
@@ -31,10 +34,10 @@ def plot_profile(ax):
     obs_uniq[i] = obs_rep
 
   #Create an image of the profile evolution calibrated in time
-  days = (dates[-1] - dates[0]).days
+  days = (dates[-1] - ref_date).days
   img = np.zeros((days,512))
   for i,n in enumerate(img):
-    idx = np.abs(date_uniq - date_uniq[0] - datetime.timedelta(i)).argmin()
+    idx = np.abs(date_uniq - ref_date - datetime.timedelta(i)).argmin()
     img[i] = obs_uniq[idx]
 
   img -= np.median(img, axis=1, keepdims=True)
@@ -71,10 +74,10 @@ def plot(fig):
   #ax1.minorticks_on()
   ax1.tick_params(axis='both', which='minor', top='on', bottom='off', left='off', right='off')
   ax1.axvline(convert(55859.43), c='k', ls='--')
-  ax1.axvspan(convert(55402), convert(56258), fc='lightcoral', ec=None, linewidth=0.)
+  ax1.axvspan(convert(55633), convert(56258), fc='lightcoral', ec=None, linewidth=0.)
   ax1.axvspan(convert(56258), convert(res[0,-1]), fc='palegreen', ec=None, linewidth=0.)
   pos = ax1.get_position()
-  x_in = (55402.-res[0,0]) / (res[0,-1]-res[0,0]) * (pos.xmax - pos.xmin) + pos.xmin
+  x_in = (55633.-res[0,0]) / (res[0,-1]-res[0,0]) * (pos.xmax - pos.xmin) + pos.xmin
   y_in = (pos.ymax - pos.ymin) * 0.4
   ax1_in = plt.axes([x_in, pos.ymin, pos.xmax-x_in, y_in])
   ax1_in.tick_params(axis='both', labelleft='off', labelbottom='off', bottom='off', top='off', left='off', right='off')
@@ -88,7 +91,7 @@ def plot(fig):
   ax2.set_ylabel(r'$\dot{\nu}\ \times\ 10^{-15}$ Hz/s')
   ax2.tick_params(axis='x', labelbottom='off', labeltop='off', bottom='off', top='off')
   ax2.axvline(55859.43, c='k', ls='--')
-  ax2.axvspan(55402, 56258, fc='lightcoral', ec=None, linewidth=0.)
+  ax2.axvspan(55633, 56258, fc='lightcoral', ec=None, linewidth=0.)
   ax2.axvspan(56258, res[0,-1], fc='palegreen', ec=None, linewidth=0.)
   ax2.ticklabel_format(useOffset=False)
   ax2.set_yticks(np.linspace(-9.541,-9.533,5))
@@ -106,7 +109,7 @@ def plot(fig):
   ax3.tick_params(axis='x', top='off')
   #ax3.minorticks_on()
   ax3.tick_params(axis='both', which='minor', bottom='on', top='off', left='off', right='off')
-  ax3.legend(loc='lower left', fancybox=True, numpoints=1)
+  ax3.legend(loc='lower left', fancybox=True, numpoints=1, prop={'size': 6})
   ax3.set_ylabel('DM (pc cm$^{-3}$)')
   ax3.ticklabel_format(useOffset=False)
   
@@ -155,7 +158,14 @@ if __name__ == '__main__':
   fig = plt.figure(figsize=(7,4))
   plot(fig)
 
-  fig.savefig('timing.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+  #fig.savefig('timing.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+
+  pp = PdfPages('timing.pdf')
+  pp.savefig(fig, papertype='a4', orientation='portrait', dpi=200)
+  pp.close()
+
+
+
 
   plt.show()
 

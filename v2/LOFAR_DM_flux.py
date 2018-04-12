@@ -5,13 +5,16 @@ from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 import matplotlib.gridspec as gridspec
 import numpy as np
 import os
+from matplotlib import rcParams
+rcParams['ps.fonttype'] = 42
+from matplotlib.backends.backend_pdf import PdfPages
 
 from mjd2date import convert
 from mjd2date import year
 
 
 data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
-
+#data_folder = '/data1/hessels/drg21_data1_bak_20170724/Daniele/B2217+47/Analysis/plot_data'
 
 def plot():
   gs = gridspec.GridSpec(1, 2, wspace=0.1)
@@ -55,15 +58,18 @@ def plot():
 
 
 def DM(ax):
-  DM = np.load(os.path.join(data_folder, 'DM.npy'))[:, 1:]
-  DM_tel = np.load(os.path.join(data_folder, 'DM_tel.npy'))[1:]
+  DM = np.load(os.path.join(data_folder, 'DM_LOFAR.npy'))[:, 1:]
+  #DM_tel = np.load(os.path.join(data_folder, 'DM_tel.npy'))[1:]
 
-  idx = np.where(DM_tel == 'LOFAR')[0]
-  d = DM[:, idx]
+  #idx = np.where(DM_tel == 'LOFAR')[0]
+  #d = DM[:, idx]
+
+  d = DM
+
   idx = np.argsort(d[0])
   date = [year(convert(n)) for n in d[0,idx]]
   ax.errorbar((d[1,idx]-43.485)*1000, date, xerr=d[2,idx]*1000, fmt='ko', markersize=2, capsize=0)
-  ax.set_xlabel('DM - 43.485\n(10$^{-3}$pc cm$^{-3}$)')
+  ax.set_xlabel('DM - 43,485\n(10$^{-3}$pc cm$^{-3}$)')
 
   return
 
@@ -85,7 +91,7 @@ if __name__ == '__main__':
   fig = plt.figure(figsize=(3.5,4))
 
   plot()
-  plt.savefig('LOFAR_DM_flux.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+  plt.savefig('LOFAR_DM_flux.pdf', format='pdf', dpi=300)
 
   plt.show()
 

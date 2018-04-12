@@ -7,14 +7,14 @@ import datetime
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 from scipy.interpolate import interp2d
+from matplotlib.backends.backend_pdf import PdfPages
 
 from mjd2date import convert
 from mjd2date import year
 
 
 data_folder = "/data1/Daniele/B2217+47/Analysis/plot_data"
-ref_date = datetime.date(2010, 7, 25)
-ref_mjd = 55402
+ref_date = datetime.date(2011, 1, 1)
 
 
 def plot():
@@ -104,8 +104,9 @@ def profiles(ax):
   #Plot
   days = days * dt + dt / 2
   distance = 0.06
+  #ref_date = dates.min()
   for i, obs in enumerate(obs_uniq):
-    y = obs / distance + year(convert(days[i]+ref_mjd))
+    y = obs / distance + year(dates.min()+datetime.timedelta(days[i]))
     x = (np.arange(y.size) - 258) / 512. * 538.4688219194
     ax.plot(x, y, 'k')
   ax.set_xlabel('Phase (ms)')
@@ -126,6 +127,8 @@ def image(ax, saturate=[-np.inf,np.inf], fit=False, cmap='hot', line=False, log=
     obs_rep = np.sum(observations[date_rep], axis=0)
     obs_uniq[i] = obs_rep
 
+  #ref_date = date_uniq.min()
+
   #Create an image of the profile evolution calibrated in time
   if interpolate:
     obs_uniq -= np.median(obs_uniq, axis=1, keepdims=True)
@@ -135,10 +138,10 @@ def image(ax, saturate=[-np.inf,np.inf], fit=False, cmap='hot', line=False, log=
     img_f = interp2d(prof_arg, days, obs_uniq, kind='linear')
     img = img_f(prof_arg, np.arange(days.max()))
   else:
-    days = (dates[-1] - dates[0]).days
+    days = (dates[-1] - ref_date).days
     img = np.zeros((days,512))
     for i,n in enumerate(img):
-      idx = np.abs(date_uniq - date_uniq[0] - datetime.timedelta(i)).argmin()
+      idx = np.abs(date_uniq - ref_date - datetime.timedelta(i)).argmin()
       img[i] = obs_uniq[idx]
 
   img -= np.median(img, axis=1, keepdims=True)
@@ -149,15 +152,19 @@ def image(ax, saturate=[-np.inf,np.inf], fit=False, cmap='hot', line=False, log=
   phase_max = (512. - 258.) / 512. * 538.4688219194
   img = np.clip(img,saturate[0],saturate[1])
   if log: img = np.log(img)
-  s = ax.imshow(img,cmap=cmap,origin="lower",aspect='auto',interpolation='nearest',extent=[phase_min, phase_max, year(dates[0]), year(dates[-1])])
+  s = ax.imshow(img,cmap=cmap,origin="lower",aspect='auto',interpolation='nearest',extent=[phase_min, phase_max, year(ref_date), year(dates[-1])])
   ax.set_xlabel('Phase (ms)')
 
   if line: ax.axhline(year(convert(55859.)), c='m')
-  ax.set_ylim([year(dates[0]), year(dates[-1])])
+  ax.set_ylim([year(ref_date), year(dates[-1])])
 
   if fit:
-    idx = np.where(np.std(observations[:,:200], axis=1) < 0.003145)[0]
-    fit_parabola(ax,dates[idx],observations[idx])
+    #idx = np.where(np.std(observations[:,:200], axis=1) < 0.003145)[0]
+    #fit_parabola(ax,dates[idx],observations[idx])
+    #fit_parabola(ax,dates,observations)
+    obs_uniq -= np.median(obs_uniq, axis=1, keepdims=True)
+    obs_uniq /= np.max(obs_uniq, axis=1, keepdims=True)
+    fit_parabola(ax,date_uniq,obs_uniq)
 
   if cbar: colorbar(cbar, saturate=saturate, cmap=cmap, log=log)
   return
@@ -167,26 +174,40 @@ def image(ax, saturate=[-np.inf,np.inf], fit=False, cmap='hot', line=False, log=
 def fit_parabola(ax,dates,observations):
   p = np.zeros_like(dates)
   for i,day in enumerate(observations):
-    p[i] = (np.where(day>=0.05)[0].max())
-  x = (p - observations.argmax(axis=1).mean())/ 512. * 538.4688219194
+    x_in = np.linspace(0., 512., 1e6)
+    y_in = np.interp(x_in, np.arange(512.), day)
+    p[i] = x_in[y_in>=0.05].max()
+    #p[i] = (np.where(day>=0.05)[0].max())
+  #x = (p - observations.argmax(axis=1).mean())/ 512. * 538.4688219194
+  x = (p - 258.)/ 512. * 538.4688219194
   y = np.array([year(d) for d in dates])
-  idx = np.where((y>2011.3)&(y<2015.9))[0]
+  #idx = np.where((y>2011.3)&(y<2015.6))[0]
+  idx = np.where(y<2015.6)[0]
   x2 = x[idx]
   y2 = y[idx]
   par_fit = np.polyfit(y2, x2, 2)
   lin_fit = np.polyfit(y2, x2, 1)
   ax.errorbar(x,y,c='r',xerr=.5,ms=1., lw=1., ls='', zorder=1)
-  ax.plot(np.poly1d(par_fit)(y2), y2, 'g', lw=2., zorder=2)
+  ax.plot(np.poly1d(par_fit)(y2), y2, 'k', lw=2., zorder=2)
+
+  #ax.plot(np.poly1d(lin_fit)(y2), y2, 'y', lw=2., zorder=2)
+
   return
+
 
 
 
 if __name__ == '__main__':
   mpl.rc('font',size=8)
-  fig = plt.figure(figsize=(7,8))
+  fig = plt.figure(figsize=(6.8,7.8))
 
   plot()
-  plt.savefig('LOFAR_profiles.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+  #plt.savefig('LOFAR_profiles.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+
+  pp = PdfPages('LOFAR_profiles.pdf')
+  pp.savefig(fig, papertype='a4', orientation='portrait', dpi=200)
+  pp.close()
+
 
   plt.show()
 

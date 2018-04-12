@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import matplotlib as mpl
+from matplotlib import rcParams
+rcParams['ps.fonttype'] = 42
 
 mpl.rc('font',size=8)
 

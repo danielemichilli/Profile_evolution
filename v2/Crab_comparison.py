@@ -5,6 +5,9 @@ import os
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 import matplotlib.gridspec as gridspec
+from matplotlib import rcParams
+rcParams['ps.fonttype'] = 42
+from matplotlib.backends.backend_pdf import PdfPages
 
 import LOFAR_profiles
 
@@ -77,7 +80,13 @@ if __name__ == '__main__':
   fig = plt.figure(figsize=(3.5,4))
 
   plot()
-  plt.savefig('Crab_comparison.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+  #plt.savefig('Crab_comparison.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+
+  
+  pp = PdfPages('Crab_comparison.pdf')
+  pp.savefig(fig, papertype='a4', orientation='portrait', dpi=200)
+  pp.close()
+
 
   plt.show()
 

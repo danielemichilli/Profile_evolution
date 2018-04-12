@@ -9,6 +9,9 @@ from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 from mjd2date import year
 from matplotlib.ticker import ScalarFormatter 
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+from matplotlib import rcParams
+rcParams['ps.fonttype'] = 42
+from matplotlib.backends.backend_pdf import PdfPages
 
 mpl.rc('font',size=8)
 mpl.rcParams['lines.linewidth'] = .5
@@ -41,7 +44,14 @@ def main():
   ax_mid_l.set_xlim([-24,60])
   ax_top_r.set_xlim([(450.-517.)/1024.*538.4688219194, (632.-517.)/1024.*538.4688219194])
 
-  fig.savefig('polarisation.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+  fig.subplots_adjust(left=.08,right=.98,bottom=.1,top=.9)
+  #fig.savefig('polarisation.eps', papertype='a4', orientation='portrait', format='eps', dpi=200)
+
+  pp = PdfPages('polarisation.pdf')
+  pp.savefig(fig, papertype='a4', orientation='portrait', dpi=200)
+  pp.close()
+
+
   plt.show()
 
   return
